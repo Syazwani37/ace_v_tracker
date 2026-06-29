@@ -1,0 +1,11 @@
+# Local database files
+tracker.db
+database.json
+
+# IDE / Editor configurations
+.vscode/
+.idea/
+
+# Windows system files
+Thumbs.db
+Desktop.ini
