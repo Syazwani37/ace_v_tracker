@@ -202,7 +202,7 @@ app.get('/export', (req, res) => {
     
     // Set headers for CSV attachment download
     res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename=eeiv_engagements_export_${new Date().toISOString().slice(0,10).replace(/-/g, '')}.csv`);
+    res.setHeader('Content-Disposition', `attachment; filename=avtracker_engagements_export_${new Date().toISOString().slice(0,10).replace(/-/g, '')}.csv`);
     
     let csvContent = 'Date Occurred,Company Name,Engagement Type,Contact Person,Status,Students Count,Objective\n';
     
@@ -228,5 +228,5 @@ app.get('/export', (req, res) => {
 
 // Start listening for requests
 app.listen(PORT, () => {
-    console.log(`EEIV Tracker server successfully started at http://localhost:${PORT}`);
+    console.log(`AVTracker server successfully started at http://localhost:${PORT}`);
 });
