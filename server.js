@@ -21,12 +21,12 @@ app.get('/', (req, res) => {
     const engagements = db.getEngagements();
     const companies = db.getCompanies();
     
-    // Compute dashboard statistics (matching values in mockup: 120, 8, 550)
-    const totalEngagements = 120; // Hardcoded or calculated, let's make it match mockup or base on data
-    const upcomingVisits = engagements.filter(e => e.status === 'Scheduled').length || 8; 
+    // Compute dashboard statistics dynamically
+    const totalEngagements = engagements.length;
+    const upcomingVisits = engagements.filter(e => e.status === 'Scheduled' || e.status === 'Pending Approval').length; 
     const totalStudents = engagements.reduce((sum, eng) => {
         return eng.status === 'Completed' ? sum + (parseInt(eng.students_count) || 0) : sum;
-    }, 0) || 550;
+    }, 0);
 
     const successParam = req.query.success || '';
 
