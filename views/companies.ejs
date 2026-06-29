@@ -1,58 +1,7 @@
-<?php
-require_once 'db.php';
-
-// Handle Add Company POST request
-$message = '';
-$message_type = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add_company') {
-    $name = trim($_POST['name'] ?? '');
-    $industry = trim($_POST['industry'] ?? '');
-    $location = trim($_POST['location'] ?? '');
-    $status = trim($_POST['status'] ?? 'Active Partner');
-    $partnership_date = trim($_POST['partnership_date'] ?? date('Y-m-d'));
-
-    if (!empty($name) && !empty($industry) && !empty($location)) {
-        $added = add_company($name, $industry, $location, $status, $partnership_date);
-        if ($added) {
-            $message = "Success! Partner company '<strong>$name</strong>' has been added.";
-            $message_type = "success";
-        } else {
-            $message = "Error: A partner company named '<strong>$name</strong>' already exists or an error occurred.";
-            $message_type = "danger";
-        }
-    } else {
-        $message = "Error: All fields (Name, Industry, Location) are required.";
-        $message_type = "warning";
-    }
-}
-
-// Get list of companies
-$companies = get_companies();
-
-// Get filter inputs
-$search_query = trim($_GET['search'] ?? '');
-$industry_filter = trim($_GET['industry'] ?? '');
-
-// Filter list based on inputs
-if (!empty($search_query) || !empty($industry_filter)) {
-    $companies = array_filter($companies, function($c) use ($search_query, $industry_filter) {
-        $matches_search = empty($search_query) || stripos($c['name'], $search_query) !== false;
-        $matches_industry = empty($industry_filter) || strcasecmp($c['industry'], $industry_filter) === 0;
-        return $matches_search && $matches_industry;
-    });
-}
-
-// Extract distinct industries for filter dropdown
-$all_companies_raw = get_companies();
-$industries = array_unique(array_filter(array_column($all_companies_raw, 'industry')));
-sort($industries);
-
-$page_title = "Partner Directory";
-include 'header.php';
-?>
+<%- include('partials/header') %>
 
 <div class="app-container">
-    <?php include 'sidebar.php'; ?>
+    <%- include('partials/sidebar') %>
     
     <main class="main-content">
         <!-- Page Header -->
@@ -67,30 +16,30 @@ include 'header.php';
         </div>
 
         <!-- Alert Notification -->
-        <?php if (!empty($message)): ?>
-            <div class="alert alert-<?php echo $message_type; ?> alert-dismissible fade show" role="alert">
-                <?php echo $message; ?>
+        <% if (message) { %>
+            <div class="alert alert-<%= message_type %> alert-dismissible fade show" role="alert">
+                <%- message %>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
-        <?php endif; ?>
+        <% } %>
 
         <!-- Search & Filter Card -->
         <div class="panel-card mb-4">
             <div class="panel-card-body py-3">
-                <form method="GET" action="companies.php" class="row g-3 align-items-end">
+                <form method="GET" action="/companies" class="row g-3 align-items-end">
                     <div class="col-md-5">
                         <label class="form-label text-xs fw-semibold text-secondary uppercase">Search Name</label>
-                        <input type="text" name="search" class="form-control" placeholder="Search Company Name..." value="<?php echo htmlspecialchars($search_query); ?>">
+                        <input type="text" name="search" class="form-control" placeholder="Search Company Name..." value="<%= search_query %>">
                     </div>
                     <div class="col-md-4">
                         <label class="form-label text-xs fw-semibold text-secondary uppercase">Industry Filter</label>
                         <select name="industry" class="form-select">
                             <option value="">All Industries</option>
-                            <?php foreach ($industries as $ind): ?>
-                                <option value="<?php echo htmlspecialchars($ind); ?>" <?php echo ($industry_filter === $ind) ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($ind); ?>
+                            <% industries.forEach(ind => { %>
+                                <option value="<%= ind %>" <%= industry_filter === ind ? 'selected' : '' %>>
+                                    <%= ind %>
                                 </option>
-                            <?php endforeach; ?>
+                            <% }) %>
                         </select>
                     </div>
                     <div class="col-md-3">
@@ -98,11 +47,11 @@ include 'header.php';
                             <button type="submit" class="btn btn-primary w-100">
                                 <i class="fa-solid fa-filter me-1"></i> Filter
                             </button>
-                            <?php if (!empty($search_query) || !empty($industry_filter)): ?>
-                                <a href="companies.php" class="btn btn-outline-secondary w-50" title="Clear Filters">
+                            <% if (search_query || industry_filter) { %>
+                                <a href="/companies" class="btn btn-outline-secondary w-50" title="Clear Filters">
                                     <i class="fa-solid fa-rotate-left"></i>
                                 </a>
-                            <?php endif; ?>
+                            <% } %>
                         </div>
                     </div>
                 </form>
@@ -113,7 +62,7 @@ include 'header.php';
         <div class="panel-card">
             <div class="panel-card-header">
                 <h5>Industry Partners List</h5>
-                <span class="text-muted text-xs"><?php echo count($companies); ?> matching partners</span>
+                <span class="text-muted text-xs"><%= companies.length %> matching partners</span>
             </div>
             <div class="panel-card-body p-0">
                 <div class="table-responsive">
@@ -128,38 +77,38 @@ include 'header.php';
                             </tr>
                         </thead>
                         <tbody>
-                            <?php if (count($companies) > 0): ?>
-                                <?php foreach ($companies as $row): ?>
-                                    <?php
-                                    $status_class = 'badge-pending';
-                                    if ($row['status'] == 'Active Partner') $status_class = 'badge-completed';
-                                    elseif ($row['status'] == 'Pending') $status_class = 'badge-pending';
-                                    elseif ($row['status'] == 'Archived' || $row['status'] == 'Inactive') $status_class = 'badge-cancelled';
-                                    ?>
+                            <% if (companies.length > 0) { %>
+                                <% companies.forEach(row => { %>
+                                    <%
+                                    let status_class = 'badge-pending';
+                                    if (row.status === 'Active Partner') status_class = 'badge-completed';
+                                    else if (row.status === 'Pending') status_class = 'badge-pending';
+                                    else if (row.status === 'Archived' || row.status === 'Inactive') status_class = 'badge-cancelled';
+                                    %>
                                     <tr>
                                         <td>
                                             <div class="d-flex align-items-center gap-2">
                                                 <div class="avatar bg-light text-primary rounded border fw-bold text-uppercase d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; font-size: 0.8rem;">
-                                                    <?php echo substr($row['name'], 0, 2); ?>
+                                                    <%= row.name.substring(0, 2) %>
                                                 </div>
-                                                <span class="fw-bold text-dark"><?php echo htmlspecialchars($row['name']); ?></span>
+                                                <span class="fw-bold text-dark"><%= row.name %></span>
                                             </div>
                                         </td>
-                                        <td><?php echo htmlspecialchars($row['industry']); ?></td>
-                                        <td><i class="fa-solid fa-location-dot me-1 text-muted"></i> <?php echo htmlspecialchars($row['location']); ?></td>
-                                        <td><?php echo htmlspecialchars($row['partnership_date']); ?></td>
+                                        <td><%= row.industry %></td>
+                                        <td><i class="fa-solid fa-location-dot me-1 text-muted"></i> <%= row.location %></td>
+                                        <td><%= row.partnership_date %></td>
                                         <td>
-                                            <span class="badge-custom <?php echo $status_class; ?>">
-                                                <?php echo htmlspecialchars($row['status']); ?>
+                                            <span class="badge-custom <%= status_class %>">
+                                                <%= row.status %>
                                             </span>
                                         </td>
                                     </tr>
-                                <?php endforeach; ?>
-                            <?php else: ?>
+                                <% }) %>
+                            <% } else { %>
                                 <tr>
                                     <td colspan="5" class="text-center py-4 text-muted">No partners match the search criteria.</td>
                                 </tr>
-                            <?php endif; ?>
+                            <% } %>
                         </tbody>
                     </table>
                 </div>
@@ -176,8 +125,7 @@ include 'header.php';
                 <h5 class="modal-title fw-bold" id="addCompanyModalLabel">Add Industry Partner</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="POST" action="companies.php">
-                <input type="hidden" name="action" value="add_company">
+            <form method="POST" action="/companies">
                 <div class="modal-body px-4 pb-4">
                     <div class="mb-3">
                         <label for="name" class="form-label text-xs fw-semibold text-secondary uppercase">Company Name</label>
@@ -211,7 +159,7 @@ include 'header.php';
                         </div>
                         <div class="col-md-6">
                             <label for="partnership_date" class="form-label text-xs fw-semibold text-secondary uppercase">Start Date</label>
-                            <input type="date" class="form-control" id="partnership_date" name="partnership_date" value="<?php echo date('Y-m-d'); ?>">
+                            <input type="date" class="form-control" id="partnership_date" name="partnership_date" value="<%= new Date().toISOString().split('T')[0] %>">
                         </div>
                     </div>
                 </div>
@@ -224,4 +172,4 @@ include 'header.php';
     </div>
 </div>
 
-<?php include 'footer.php'; ?>
+<%- include('partials/footer') %>

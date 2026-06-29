@@ -2,6 +2,9 @@
 tracker.db
 database.json
 
+# Dependencies
+node_modules/
+
 # IDE / Editor configurations
 .vscode/
 .idea/
@@ -9,3 +12,4 @@ database.json
 # Windows system files
 Thumbs.db
 Desktop.ini
+

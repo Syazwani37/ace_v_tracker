@@ -1,44 +1,7 @@
-<?php
-require_once 'db.php';
-
-$message = '';
-$message_type = '';
-
-// Handle POST request
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $company_id = intval($_POST['company_id'] ?? 0);
-    $date_occurred = trim($_POST['date_occurred'] ?? '');
-    $engagement_type = trim($_POST['engagement_type'] ?? '');
-    $contact_person = trim($_POST['contact_person'] ?? '');
-    $status = trim($_POST['status'] ?? 'Scheduled');
-    $students_count = intval($_POST['students_count'] ?? 0);
-    $objective = trim($_POST['objective'] ?? '');
-
-    if ($company_id > 0 && !empty($date_occurred) && !empty($engagement_type) && !empty($contact_person)) {
-        $added = add_engagement($company_id, $date_occurred, $engagement_type, $contact_person, $status, $objective, $students_count);
-        if ($added) {
-            // Redirect to dashboard with success query param
-            header("Location: index.php?success=visit_logged");
-            exit;
-        } else {
-            $message = "Error: Failed to save the visit. Please check inputs and try again.";
-            $message_type = "danger";
-        }
-    } else {
-        $message = "Error: Please fill in all required fields (Company, Date, Engagement Type, and Point of Contact).";
-        $message_type = "warning";
-    }
-}
-
-// Fetch companies for dropdown
-$companies = get_companies();
-
-$page_title = "Log New Visit";
-include 'header.php';
-?>
+<%- include('partials/header') %>
 
 <div class="app-container">
-    <?php include 'sidebar.php'; ?>
+    <%- include('partials/sidebar') %>
     
     <main class="main-content">
         <!-- Page Header -->
@@ -48,12 +11,12 @@ include 'header.php';
         </div>
 
         <!-- Alert Notification -->
-        <?php if (!empty($message)): ?>
-            <div class="alert alert-<?php echo $message_type; ?> alert-dismissible fade show" role="alert">
-                <?php echo $message; ?>
+        <% if (message) { %>
+            <div class="alert alert-<%= message_type %> alert-dismissible fade show" role="alert">
+                <%- message %>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
-        <?php endif; ?>
+        <% } %>
 
         <!-- Form Card -->
         <div class="panel-card max-w-4xl mx-auto shadow-sm">
@@ -61,28 +24,28 @@ include 'header.php';
                 <h5>Engagement Details</h5>
             </div>
             <div class="panel-card-body">
-                <form method="POST" action="add_visit.php">
+                <form method="POST" action="/add-visit">
                     <div class="row g-4">
                         <!-- Company Selector -->
                         <div class="col-md-6">
                             <label for="company_id" class="form-label text-xs fw-semibold text-secondary uppercase">Employer / Company *</label>
                             <select class="form-select" id="company_id" name="company_id" required>
                                 <option value="" disabled selected>Select Company...</option>
-                                <?php foreach ($companies as $comp): ?>
-                                    <option value="<?php echo $comp['id']; ?>">
-                                        <?php echo htmlspecialchars($comp['name']); ?> (<?php echo htmlspecialchars($comp['industry']); ?>)
+                                <% companies.forEach(comp => { %>
+                                    <option value="<%= comp.id %>">
+                                        <%= comp.name %> (<%= comp.industry %>)
                                     </option>
-                                <?php endforeach; ?>
+                                <% }) %>
                             </select>
                             <div class="form-text text-xxs mt-1">
-                                Don't see the company? <a href="companies.php" class="text-primary text-decoration-none">Add new company partner first</a>.
+                                Don't see the company? <a href="/companies" class="text-primary text-decoration-none">Add new company partner first</a>.
                             </div>
                         </div>
 
                         <!-- Date -->
                         <div class="col-md-6">
                             <label for="date_occurred" class="form-label text-xs fw-semibold text-secondary uppercase">Scheduled Date *</label>
-                            <input type="date" class="form-control" id="date_occurred" name="date_occurred" required value="<?php echo date('Y-m-d'); ?>">
+                            <input type="date" class="form-control" id="date_occurred" name="date_occurred" required value="<%= new Date().toISOString().split('T')[0] %>">
                         </div>
 
                         <!-- Engagement Type -->
@@ -130,7 +93,7 @@ include 'header.php';
 
                         <!-- Submit Buttons -->
                         <div class="col-md-12 text-end mt-4">
-                            <a href="index.php" class="btn btn-outline-secondary me-2">Cancel</a>
+                            <a href="/" class="btn btn-outline-secondary me-2">Cancel</a>
                             <button type="submit" class="btn btn-primary px-4">
                                 <i class="fa-solid fa-floppy-disk me-1"></i> Save Visit
                             </button>
@@ -142,4 +105,4 @@ include 'header.php';
     </main>
 </div>
 
-<?php include 'footer.php'; ?>
+<%- include('partials/footer') %>

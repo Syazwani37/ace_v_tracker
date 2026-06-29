@@ -1,6 +1,3 @@
-<?php
-$current_page = basename($_SERVER['SCRIPT_NAME']);
-?>
 <div class="sidebar">
     <div class="sidebar-brand">
         <div class="brand-icon">
@@ -14,22 +11,22 @@ $current_page = basename($_SERVER['SCRIPT_NAME']);
     
     <ul class="nav flex-column mt-4 sidebar-menu">
         <li class="nav-item mb-2">
-            <a href="index.php" class="nav-link <?php echo ($current_page == 'index.php' || $current_page == '') ? 'active' : ''; ?>">
+            <a href="/" class="nav-link <%= current_page === 'index' ? 'active' : '' %>">
                 <i class="fa-solid fa-chart-pie me-2"></i> Dashboard
             </a>
         </li>
         <li class="nav-item mb-2">
-            <a href="companies.php" class="nav-link <?php echo ($current_page == 'companies.php') ? 'active' : ''; ?>">
+            <a href="/companies" class="nav-link <%= current_page === 'companies' ? 'active' : '' %>">
                 <i class="fa-solid fa-building me-2"></i> Partner List
             </a>
         </li>
         <li class="nav-item mb-2">
-            <a href="add_visit.php" class="nav-link <?php echo ($current_page == 'add_visit.php') ? 'active' : ''; ?>">
+            <a href="/add-visit" class="nav-link <%= current_page === 'add-visit' ? 'active' : '' %>">
                 <i class="fa-solid fa-calendar-plus me-2"></i> Log New Visit
             </a>
         </li>
         <li class="nav-item mb-2">
-            <a href="report_analytics.php" class="nav-link <?php echo ($current_page == 'report_analytics.php') ? 'active' : ''; ?>">
+            <a href="/reports" class="nav-link <%= current_page === 'reports' ? 'active' : '' %>">
                 <i class="fa-solid fa-chart-line me-2"></i> Reports & Analytics
             </a>
         </li>

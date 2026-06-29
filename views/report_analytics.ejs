@@ -1,79 +1,26 @@
-<?php
-require_once 'db.php';
+<%- include('partials/header') %>
 
-$page_title = "Reports & Analytics";
-include 'header.php';
-
-// Fetch data
-$engagements = get_engagements();
-$companies = get_companies();
-$feedback = get_feedback_analytics();
-
-// Calculate engagement types stats
-$type_stats = [
-    'Site Visit' => ['visits' => 0, 'students' => 0],
-    'Guest Lecture' => ['visits' => 0, 'students' => 0],
-    'Workshop' => ['visits' => 0, 'students' => 0],
-    'Tech Talk' => ['visits' => 0, 'students' => 0],
-    'Career Fair' => ['visits' => 0, 'students' => 0],
-    'Advisory Panel' => ['visits' => 0, 'students' => 0],
-];
-
-$total_visits_calc = 0;
-$total_students_calc = 0;
-
-foreach ($engagements as $eng) {
-    $t = $eng['engagement_type'];
-    if (isset($type_stats[$t])) {
-        $type_stats[$t]['visits']++;
-        if ($eng['status'] == 'Completed') {
-            $type_stats[$t]['students'] += intval($eng['students_count']);
-            $total_students_calc += intval($eng['students_count']);
-        }
-        $total_visits_calc++;
-    }
-}
-
-// Group engagements by month for Chart.js
-$monthly_data = [];
-foreach ($engagements as $eng) {
-    if (!empty($eng['date_occurred'])) {
-        $month = date('F Y', strtotime($eng['date_occurred'])); // e.g. "May 2024"
-        if (!isset($monthly_data[$month])) {
-            $monthly_data[$month] = 0;
-        }
-        $monthly_data[$month]++;
-    }
-}
-// Sort chronological-ish or keep order of date. Let's sort by date key.
-uksort($monthly_data, function($a, $b) {
-    return strtotime($a) - strtotime($b);
-});
-
-// Take the last 6 months for chart display
-$chart_months = array_keys($monthly_data);
-$chart_counts = array_values($monthly_data);
-
-// Feedback stars rendering helper
-function render_stars($rating) {
-    $rating = round($rating * 2) / 2; // round to nearest 0.5
-    $output = '<div class="text-warning d-flex gap-1">';
-    for ($i = 1; $i <= 5; $i++) {
-        if ($rating >= $i) {
-            $output .= '<i class="fas fa-star"></i>';
-        } elseif ($rating >= $i - 0.5) {
-            $output .= '<i class="fas fa-star-half-alt"></i>';
+<%
+function render_stars(rating) {
+    const val = parseFloat(rating) || 0;
+    const rounded = Math.round(val * 2) / 2; // round to nearest 0.5
+    let output = '<div class="text-warning d-flex gap-1">';
+    for (let i = 1; i <= 5; i++) {
+        if (rounded >= i) {
+            output += '<i class="fas fa-star"></i>';
+        } else if (rounded >= i - 0.5) {
+            output += '<i class="fas fa-star-half-alt"></i>';
         } else {
-            $output .= '<i class="far fa-star"></i>';
+            output += '<i class="far fa-star"></i>';
         }
     }
-    $output .= '</div>';
-    return $output;
+    output += '</div>';
+    return output;
 }
-?>
+%>
 
 <div class="app-container">
-    <?php include 'sidebar.php'; ?>
+    <%- include('partials/sidebar') %>
     
     <main class="main-content">
         <!-- Page Header -->
@@ -83,7 +30,7 @@ function render_stars($rating) {
                 <p>View analysis reports, student feedback, and monthly dynamic engagement analytics.</p>
             </div>
             <div>
-                <a href="export.php" class="btn btn-primary btn-sm">
+                <a href="/export" class="btn btn-primary btn-sm">
                     <i class="fa-solid fa-file-export me-1"></i> Export Data CSV
                 </a>
             </div>
@@ -112,17 +59,17 @@ function render_stars($rating) {
                                             </tr>
                                         </thead>
                                         <tbody class="divide-y text-secondary">
-                                            <?php foreach ($type_stats as $type => $stats): ?>
+                                            <% Object.keys(type_stats).forEach(type => { %>
                                                 <tr>
-                                                    <td class="py-2 fw-medium text-dark"><?php echo $type; ?></td>
-                                                    <td class="py-2 text-end"><?php echo $stats['visits']; ?></td>
-                                                    <td class="py-2 text-end"><?php echo $stats['students']; ?></td>
+                                                    <td class="py-2 fw-medium text-dark"><%= type %></td>
+                                                    <td class="py-2 text-end"><%= type_stats[type].visits %></td>
+                                                    <td class="py-2 text-end"><%= type_stats[type].students %></td>
                                                 </tr>
-                                            <?php endforeach; ?>
+                                            <% }) %>
                                             <tr class="fw-bold text-dark border-top">
                                                 <td class="py-2">Total Combined</td>
-                                                <td class="py-2 text-end"><?php echo $total_visits_calc; ?></td>
-                                                <td class="py-2 text-end"><?php echo $total_students_calc; ?></td>
+                                                <td class="py-2 text-end"><%= total_visits_calc %></td>
+                                                <td class="py-2 text-end"><%= total_students_calc %></td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -148,7 +95,7 @@ function render_stars($rating) {
                 <div class="panel-card h-100 mb-0">
                     <div class="panel-card-header">
                         <h5>Partner Status Report</h5>
-                        <a href="companies.php" class="text-primary text-xs text-decoration-none fw-semibold">View All</a>
+                        <a href="/companies" class="text-primary text-xs text-decoration-none fw-semibold">View All</a>
                     </div>
                     <div class="panel-card-body p-0">
                         <div class="table-responsive">
@@ -161,25 +108,24 @@ function render_stars($rating) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php 
-                                    // Display first 5 companies
-                                    $limited_companies = array_slice($companies, 0, 5);
-                                    foreach ($limited_companies as $c): 
-                                        $status_class = 'badge-pending';
-                                        if ($c['status'] == 'Active Partner') $status_class = 'badge-completed';
-                                        elseif ($c['status'] == 'Pending') $status_class = 'badge-pending';
-                                        elseif ($c['status'] == 'Inactive') $status_class = 'badge-cancelled';
-                                    ?>
+                                    <% 
+                                    const limitedCompanies = companies.slice(0, 5);
+                                    limitedCompanies.forEach(c => { 
+                                        let status_class = 'badge-pending';
+                                        if (c.status === 'Active Partner') status_class = 'badge-completed';
+                                        else if (c.status === 'Pending') status_class = 'badge-pending';
+                                        else if (c.status === 'Inactive') status_class = 'badge-cancelled';
+                                    %>
                                         <tr>
-                                            <td><strong><?php echo htmlspecialchars($c['name']); ?></strong></td>
-                                            <td><?php echo htmlspecialchars($c['industry']); ?></td>
+                                            <td><strong><%= c.name %></strong></td>
+                                            <td><%= c.industry %></td>
                                             <td>
-                                                <span class="badge-custom <?php echo $status_class; ?>" style="font-size: 0.7rem; padding: 0.2em 0.5em;">
-                                                    <?php echo htmlspecialchars($c['status']); ?>
+                                                <span class="badge-custom <%= status_class %>" style="font-size: 0.7rem; padding: 0.2em 0.5em;">
+                                                    <%= c.status %>
                                                 </span>
                                             </td>
                                         </tr>
-                                    <?php endforeach; ?>
+                                    <% }) %>
                                 </tbody>
                             </table>
                         </div>
@@ -202,18 +148,18 @@ function render_stars($rating) {
                         <div class="d-flex flex-column gap-3">
                             <div class="d-flex align-items-center justify-content-between">
                                 <span class="text-sm font-medium text-dark">Logistics & Organization</span>
-                                <?php echo render_stars($feedback['avg_visits']); ?>
+                                <%- render_stars(feedback.avg_visits) %>
                             </div>
                             <div class="d-flex align-items-center justify-content-between">
                                 <span class="text-sm font-medium text-dark">Learning & Technical Value</span>
-                                <?php echo render_stars($feedback['avg_learning']); ?>
+                                <%- render_stars(feedback.avg_learning) %>
                             </div>
                             <div class="d-flex align-items-center justify-content-between">
                                 <span class="text-sm font-medium text-dark">Overall Satisfaction</span>
-                                <?php echo render_stars($feedback['avg_feedback']); ?>
+                                <%- render_stars(feedback.avg_feedback) %>
                             </div>
                             <div class="text-xxs text-muted mt-2 border-top pt-2 text-center">
-                                Compiled from <?php echo intval($feedback['total_feedback']); ?> submitted student surveys.
+                                Compiled from <%= feedback.total_feedback %> submitted student surveys.
                             </div>
                         </div>
                     </div>
@@ -273,10 +219,10 @@ document.addEventListener("DOMContentLoaded", function() {
     new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: <?php echo json_encode(array_slice($chart_months, -5)); ?>,
+            labels: <%- JSON.stringify(chart_months) %>,
             datasets: [{
                 label: 'Engagements',
-                data: <?php echo json_encode(array_slice($chart_counts, -5)); ?>,
+                data: <%- JSON.stringify(chart_counts) %>,
                 backgroundColor: '#4f46e5',
                 hoverBackgroundColor: '#4338ca',
                 borderRadius: 6,
@@ -307,4 +253,4 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 </script>
 
-<?php include 'footer.php'; ?>
+<%- include('partials/footer') %>
