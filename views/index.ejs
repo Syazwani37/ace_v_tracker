@@ -4,11 +4,14 @@
     <%- include('partials/sidebar') %>
     
     <main class="main-content">
-        <!-- Page Header -->
+        <!-- Top Nav Bar Inclusion -->
+        <%- include('partials/top_nav') %>
+
+        <!-- Page Welcome & Actions Header -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div class="page-title-section mb-0">
-                <h2>Engagement Dashboard</h2>
-                <p>Welcome back! Here is a summary of employer engagements and partnership activity.</p>
+                <h2>Quick Stats</h2>
+                <p>Employer engagements and industrial visit monitoring overview.</p>
             </div>
             <div>
                 <a href="/export" class="btn btn-outline-secondary btn-sm me-2">
@@ -23,12 +26,12 @@
         <!-- Success Notifications -->
         <% if (success_param === 'visit_logged') { %>
             <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
-                <i class="fa-solid fa-circle-check me-2"></i> Industrial visit has been successfully logged into the database.
+                <i class="fa-solid fa-circle-check me-2"></i> Visit logged successfully. It has been sent to the approvals pipeline.
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         <% } %>
 
-        <!-- Metrics Row -->
+        <!-- Metrics Row (Matching mockup values: 120, 8, 550) -->
         <div class="row g-4 mb-4">
             <div class="col-md-4 stat-card-wrapper">
                 <div class="stat-card">
@@ -38,17 +41,19 @@
                     <div class="stat-card-info">
                         <h6>Total Engagements</h6>
                         <h2><%= total_engagements %></h2>
+                        <span class="text-xxs text-muted"><i class="fa-solid fa-circle-info"></i> 16 Engagements logged</span>
                     </div>
                 </div>
             </div>
             <div class="col-md-4 stat-card-wrapper">
                 <div class="stat-card">
                     <div class="stat-icon success">
-                        <i class="fa-solid fa-handshake"></i>
+                        <i class="fa-solid fa-clock-rotate-left"></i>
                     </div>
                     <div class="stat-card-info">
-                        <h6>Industry Partners</h6>
-                        <h2><%= total_companies %></h2>
+                        <h6>Upcoming Visits</h6>
+                        <h2><%= upcoming_visits %></h2>
+                        <span class="text-xxs text-success"><i class="fa-solid fa-circle-check"></i> Active scheduling</span>
                     </div>
                 </div>
             </div>
@@ -60,63 +65,126 @@
                     <div class="stat-card-info">
                         <h6>Student Impact</h6>
                         <h2><%= total_students %></h2>
+                        <span class="text-xxs text-primary"><i class="fa-solid fa-graduation-cap"></i> Total students reached</span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Main Panel: Recent Engagements -->
-        <div class="panel-card">
-            <div class="panel-card-header">
-                <h5>Recent Employer Engagements</h5>
-                <span class="text-muted text-xs"><%= engagements.length %> records logged</span>
-            </div>
-            <div class="panel-card-body p-0">
-                <div class="table-responsive">
-                    <table class="table custom-table align-middle">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Organization</th>
-                                <th>Type</th>
-                                <th>Point of Contact</th>
-                                <th>Students</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <% if (engagements.length > 0) { %>
-                                <% engagements.forEach(row => { %>
-                                    <%
-                                    let status_class = 'badge-pending';
-                                    if (row.status === 'Completed') status_class = 'badge-completed';
-                                    else if (row.status === 'Scheduled') status_class = 'badge-scheduled';
-                                    else if (row.status === 'Cancelled') status_class = 'badge-cancelled';
-                                    %>
+        <!-- Main Panel split side-by-side: Left=Upcoming Engagements, Right=Engagement Trend -->
+        <div class="row g-4">
+            <!-- Left Side: Upcoming Engagements -->
+            <div class="col-lg-7">
+                <div class="panel-card h-100 mb-0">
+                    <div class="panel-card-header">
+                        <h5>Upcoming Engagements</h5>
+                        <span class="text-muted text-xs">Visits in progress or scheduled</span>
+                    </div>
+                    <div class="panel-card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table custom-table align-middle">
+                                <thead>
                                     <tr>
-                                        <td><span class="fw-medium text-dark"><%= row.date_occurred %></span></td>
-                                        <td><strong><%= row.company_name %></strong></td>
-                                        <td><%= row.engagement_type %></td>
-                                        <td><%= row.contact_person %></td>
-                                        <td><%= row.students_count %></td>
-                                        <td>
-                                            <span class="badge-custom <%= status_class %>">
-                                                <%= row.status %>
-                                            </span>
-                                        </td>
+                                        <th>Date</th>
+                                        <th>Company</th>
+                                        <th>Type</th>
+                                        <th class="text-end">Action</th>
                                     </tr>
-                                <% }) %>
-                            <% } else { %>
-                                <tr>
-                                    <td colspan="6" class="text-center py-4 text-muted">No engagements logged yet.</td>
-                                </tr>
-                            <% } %>
-                        </tbody>
-                    </table>
+                                </thead>
+                                <tbody>
+                                    <% 
+                                    // Filter engagements that are scheduled or pending approval
+                                    const upcoming = engagements.filter(e => e.status === 'Scheduled' || e.status === 'Pending Approval').slice(0, 5);
+                                    if (upcoming.length > 0) { 
+                                        upcoming.forEach(row => { 
+                                    %>
+                                        <tr>
+                                            <td><span class="fw-medium text-dark"><%= row.date_occurred %></span></td>
+                                            <td><strong><%= row.company_name %></strong></td>
+                                            <td>
+                                                <span class="badge bg-light text-secondary border rounded-pill px-2 py-1" style="font-size: 0.75rem;">
+                                                    <%= row.engagement_type %>
+                                                </span>
+                                            </td>
+                                            <td class="text-end">
+                                                <a href="/visits/approvals?id=<%= row.id %>" class="btn btn-outline-primary btn-sm py-1 px-2" style="font-size: 0.8rem;">
+                                                    Action
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    <% 
+                                        }); 
+                                    } else { 
+                                    %>
+                                        <tr>
+                                            <td colspan="4" class="text-center py-4 text-muted">No upcoming engagements scheduled.</td>
+                                        </tr>
+                                    <% } %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Engagement Trend Chart -->
+            <div class="col-lg-5">
+                <div class="panel-card h-100 mb-0">
+                    <div class="panel-card-header">
+                        <h5>Engagement Trend (This Year)</h5>
+                    </div>
+                    <div class="panel-card-body d-flex flex-column justify-content-center" style="min-height: 250px;">
+                        <div class="relative" style="height: 200px; position: relative;">
+                            <canvas id="trendChart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </main>
 </div>
+
+<!-- Chart Script for Dashboard -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const ctx = document.getElementById('trendChart').getContext('2d');
+    
+    // Mock months trend data matching standard display
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+            datasets: [{
+                label: 'Engagements',
+                data: [120, 240, 480, 550, 400, 600],
+                backgroundColor: '#3b82f6',
+                hoverBackgroundColor: '#2563eb',
+                borderRadius: 6,
+                barPercentage: 0.55
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { borderDash: [2, 4], color: '#f1f5f9' },
+                    border: { display: false },
+                    ticks: { font: { size: 9 }, color: '#94a3b8', stepSize: 200 }
+                },
+                x: {
+                    grid: { display: false },
+                    border: { display: false },
+                    ticks: { font: { size: 9 }, color: '#94a3b8' }
+                }
+            }
+        }
+    });
+});
+</script>
 
 <%- include('partials/footer') %>

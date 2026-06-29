@@ -4,9 +4,12 @@
     <%- include('partials/sidebar') %>
     
     <main class="main-content">
+        <!-- Top Nav Bar -->
+        <%- include('partials/top_nav') %>
+
         <!-- Page Header -->
         <div class="page-title-section mb-4">
-            <h2>Log Industrial Visit & Engagement</h2>
+            <h2>LOG NEW INDUSTRIAL VISIT</h2>
             <p>Record a new employer engagement, site visit, or student talk in the tracker database.</p>
         </div>
 
@@ -21,18 +24,18 @@
         <!-- Form Card -->
         <div class="panel-card max-w-4xl mx-auto shadow-sm">
             <div class="panel-card-header">
-                <h5>Engagement Details</h5>
+                <h5>Engagement details</h5>
             </div>
             <div class="panel-card-body">
                 <form method="POST" action="/add-visit">
                     <div class="row g-4">
                         <!-- Company Selector -->
                         <div class="col-md-6">
-                            <label for="company_id" class="form-label text-xs fw-semibold text-secondary uppercase">Employer / Company *</label>
+                            <label for="company_id" class="form-label text-xs fw-semibold text-secondary uppercase">Company Name *</label>
                             <select class="form-select" id="company_id" name="company_id" required>
                                 <option value="" disabled selected>Select Company...</option>
                                 <% companies.forEach(comp => { %>
-                                    <option value="<%= comp.id %>">
+                                    <option value="<%= comp.id %>" <%= comp.id == selected_company_id ? 'selected' : '' %>>
                                         <%= comp.name %> (<%= comp.industry %>)
                                     </option>
                                 <% }) %>
@@ -44,8 +47,20 @@
 
                         <!-- Date -->
                         <div class="col-md-6">
-                            <label for="date_occurred" class="form-label text-xs fw-semibold text-secondary uppercase">Scheduled Date *</label>
+                            <label for="date_occurred" class="form-label text-xs fw-semibold text-secondary uppercase">Date *</label>
                             <input type="date" class="form-control" id="date_occurred" name="date_occurred" required value="<%= new Date().toISOString().split('T')[0] %>">
+                        </div>
+
+                        <!-- Start Time -->
+                        <div class="col-md-6">
+                            <label for="start_time" class="form-label text-xs fw-semibold text-secondary uppercase">Start Time</label>
+                            <input type="time" class="form-control" id="start_time" name="start_time" value="09:00">
+                        </div>
+
+                        <!-- End Time -->
+                        <div class="col-md-6">
+                            <label for="end_time" class="form-label text-xs fw-semibold text-secondary uppercase">End Time</label>
+                            <input type="time" class="form-control" id="end_time" name="end_time" value="17:00">
                         </div>
 
                         <!-- Engagement Type -->
@@ -64,38 +79,62 @@
 
                         <!-- Point of Contact -->
                         <div class="col-md-6">
-                            <label for="contact_person" class="form-label text-xs fw-semibold text-secondary uppercase">Point of Contact (Name) *</label>
+                            <label for="contact_person" class="form-label text-xs fw-semibold text-secondary uppercase">Key Contact (Name) *</label>
                             <input type="text" class="form-control" id="contact_person" name="contact_person" required placeholder="e.g. Dr. Adam / Ms. Janice">
                         </div>
 
-                        <!-- Status -->
+                        <!-- Coordinator -->
                         <div class="col-md-6">
-                            <label for="status" class="form-label text-xs fw-semibold text-secondary uppercase">Status</label>
-                            <select class="form-select" id="status" name="status">
-                                <option value="Scheduled">Scheduled</option>
-                                <option value="Completed">Completed</option>
-                                <option value="Cancelled">Cancelled</option>
-                            </select>
+                            <label for="coordinator" class="form-label text-xs fw-semibold text-secondary uppercase">Coordinator *</label>
+                            <input type="text" class="form-control" id="coordinator" name="coordinator" required placeholder="e.g. Prof. Marina" value="Admin Portal">
                         </div>
 
-                        <!-- Student Count -->
+                        <!-- Nom Students (Impacted) -->
                         <div class="col-md-6">
-                            <label for="students_count" class="form-label text-xs fw-semibold text-secondary uppercase">Students Impacted / Attending</label>
+                            <label for="students_count" class="form-label text-xs fw-semibold text-secondary uppercase">Nom Students</label>
                             <input type="number" class="form-control" id="students_count" name="students_count" min="0" value="0">
-                            <div class="form-text text-xxs mt-1">Number of students attending this engagement.</div>
                         </div>
 
-                        <!-- Objective / Description -->
+                        <!-- Purpose / Agenda -->
                         <div class="col-md-12">
-                            <label for="objective" class="form-label text-xs fw-semibold text-secondary uppercase">Visit Objective & Notes</label>
-                            <textarea class="form-control" id="objective" name="objective" rows="4" placeholder="Describe the objectives, outline of the event, or specific notes regarding this engagement..."></textarea>
+                            <label for="objective" class="form-label text-xs fw-semibold text-secondary uppercase">Purpose / Agenda</label>
+                            <textarea class="form-control" id="objective" name="objective" rows="3" placeholder="Describe the objectives, outline of the event, or specific notes regarding this engagement..."></textarea>
+                        </div>
+
+                        <!-- Required Approvals section -->
+                        <div class="col-md-12">
+                            <label class="form-label text-xs fw-semibold text-secondary uppercase d-block mb-2">Required Approvals</label>
+                            
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="checklist_approved" id="checklist_approved" checked>
+                                <label class="form-check-label text-sm text-secondary" for="checklist_approved">
+                                    Checklist and approvals
+                                </label>
+                            </div>
+                            
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="required_approved" id="required_approved">
+                                <label class="form-check-label text-sm text-secondary" for="required_approved">
+                                    Required Approval approvals
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Submission status toggle -->
+                        <div class="col-md-12">
+                            <label for="status" class="form-label text-xs fw-semibold text-secondary uppercase">Initial Status</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="Pending Approval" selected>Submit for Approval (Pending Approval)</option>
+                                <option value="Scheduled">Pre-Approve (Scheduled)</option>
+                                <option value="Completed">Direct Log (Completed)</option>
+                            </select>
                         </div>
 
                         <!-- Submit Buttons -->
                         <div class="col-md-12 text-end mt-4">
                             <a href="/" class="btn btn-outline-secondary me-2">Cancel</a>
                             <button type="submit" class="btn btn-primary px-4">
-                                <i class="fa-solid fa-floppy-disk me-1"></i> Save Visit
+                                Create Visit
                             </button>
                         </div>
                     </div>

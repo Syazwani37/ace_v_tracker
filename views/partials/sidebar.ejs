@@ -17,17 +17,22 @@
         </li>
         <li class="nav-item mb-2">
             <a href="/companies" class="nav-link <%= current_page === 'companies' ? 'active' : '' %>">
-                <i class="fa-solid fa-building me-2"></i> Partner List
+                <i class="fa-solid fa-building me-2"></i> Companies
             </a>
         </li>
         <li class="nav-item mb-2">
-            <a href="/add-visit" class="nav-link <%= current_page === 'add-visit' ? 'active' : '' %>">
-                <i class="fa-solid fa-calendar-plus me-2"></i> Log New Visit
+            <a href="/visits/approvals" class="nav-link <%= current_page === 'visits' ? 'active' : '' %>">
+                <i class="fa-solid fa-clipboard-check me-2"></i> Visits
             </a>
         </li>
         <li class="nav-item mb-2">
             <a href="/reports" class="nav-link <%= current_page === 'reports' ? 'active' : '' %>">
-                <i class="fa-solid fa-chart-line me-2"></i> Reports & Analytics
+                <i class="fa-solid fa-user-gear me-2"></i> Admin
+            </a>
+        </li>
+        <li class="nav-item mb-2">
+            <a href="#" class="nav-link text-muted opacity-50" onclick="alert('Settings Panel coming soon!')">
+                <i class="fa-solid fa-sliders me-2"></i> Settings
             </a>
         </li>
     </ul>
