@@ -1,6 +1,7 @@
-// db.js - Extended JSON database helper module
+// db.js - Extended JSON database helper module with User Authentication
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const jsonFile = path.join(__dirname, 'database.json');
 
@@ -16,10 +17,13 @@ function readData() {
     initDb();
     try {
         const content = fs.readFileSync(jsonFile, 'utf8');
-        return JSON.parse(content);
+        const data = JSON.parse(content);
+        // Ensure user collection exists
+        if (!data.users) data.users = [];
+        return data;
     } catch (err) {
         console.error('Error reading database file, returning empty schema:', err);
-        return { companies: [], engagements: [], feedback: [] };
+        return { companies: [], engagements: [], feedback: [], users: [] };
     }
 }
 
@@ -226,7 +230,8 @@ function seedMockData() {
             { id: 2, engagement_id: 2, rating_visits: 5, rating_learning: 4, rating_feedback: 5, comments: 'Highly technical exposure to urban traffic controller boards and IoT hubs.' },
             { id: 3, engagement_id: 3, rating_visits: 5, rating_learning: 5, rating_feedback: 5, comments: 'Stunning tech displays on 5G and innovative communications.' },
             { id: 4, engagement_id: 6, rating_visits: 5, rating_learning: 5, rating_feedback: 5, comments: 'Gained behind-the-scenes insights of KLIA logistics.' }
-        ]
+        ],
+        users: []
     };
     writeData(data);
 }
@@ -234,13 +239,11 @@ function seedMockData() {
 // Fetch all companies sorted by name
 function getCompanies() {
     const data = readData();
-    // Compute last engagement date for each company
     const engagements = data.engagements || [];
     const companies = data.companies.map(c => {
         const compEngs = engagements.filter(e => e.company_id === c.id && e.status === 'Completed');
         let lastEngagement = 'N/A';
         if (compEngs.length > 0) {
-            // Sort to find latest
             compEngs.sort((a, b) => b.date_occurred.localeCompare(a.date_occurred));
             lastEngagement = compEngs[0].date_occurred;
         }
@@ -333,7 +336,7 @@ function addRandomFeedback(engagementId) {
     data.feedback.push({
         id: newId,
         engagement_id: parseInt(engagementId),
-        rating_visits: Math.floor(Math.random() * 2) + 4, // 4 or 5
+        rating_visits: Math.floor(Math.random() * 2) + 4, 
         rating_learning: Math.floor(Math.random() * 2) + 4,
         rating_feedback: Math.floor(Math.random() * 2) + 4,
         comments: comment
@@ -345,8 +348,6 @@ function addRandomFeedback(engagementId) {
 function addEngagement(companyId, dateOccurred, startTime, endTime, engagementType, contactPerson, coordinator, status, objective, studentsCount, checklistApproved, requiredApproved) {
     const data = readData();
     const newId = data.engagements.length > 0 ? Math.max(...data.engagements.map(e => e.id)) + 1 : 1;
-    
-    // If status is scheduled or completed on entry, approvals can be pre-approved
     const isPreApproved = status === 'Completed' || status === 'Scheduled';
 
     data.engagements.push({
@@ -388,7 +389,6 @@ function updateEngagementApproval(id, approvalType, approvalStatus) {
         eng.status = approvalStatus;
     }
 
-    // Pipeline state progression logic
     if (eng.approval_hod === 'Approved' && eng.approval_industry === 'Approved') {
         if (eng.status === 'Pending Approval') {
             eng.status = 'Scheduled';
@@ -396,9 +396,8 @@ function updateEngagementApproval(id, approvalType, approvalStatus) {
     } else if (eng.approval_hod === 'Rejected' || eng.approval_industry === 'Rejected') {
         eng.status = 'Cancelled';
     } else {
-        // If moved back or reset
         if (eng.status === 'Scheduled' || eng.status === 'Completed') {
-            // Keep status but verify approvals
+            // Keep status
         } else {
             eng.status = 'Pending Approval';
         }
@@ -406,7 +405,6 @@ function updateEngagementApproval(id, approvalType, approvalStatus) {
 
     const result = writeData(data);
     if (result && eng.status === 'Completed') {
-        // Add random feedback if it has none yet
         const feedbackExists = data.feedback.some(f => f.engagement_id === eng.id);
         if (!feedbackExists) {
             addRandomFeedback(eng.id);
@@ -434,6 +432,89 @@ function getFeedbackAnalytics() {
     };
 }
 
+// --- USER AUTHENTICATION UTILS ---
+
+// Hash password helper using PBKDF2
+function hashPassword(password) {
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+    return { salt, hash };
+}
+
+// Verify password helper
+function verifyPassword(password, salt, hash) {
+    const verifyHash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+    return hash === verifyHash;
+}
+
+// Register a new user
+function createUser(username, email, password, fullName) {
+    const data = readData();
+
+    // 1. Email domain validation - MUST end with @mmu.edu.my
+    const trimmedEmail = (email || '').trim().toLowerCase();
+    if (!trimmedEmail.endsWith('@mmu.edu.my')) {
+        return { error: 'Only Multimedia University emails (@mmu.edu.my) are allowed to register.' };
+    }
+
+    // 2. Uniqueness check
+    const usernameExists = data.users.some(u => u.username.toLowerCase() === username.trim().toLowerCase());
+    const emailExists = data.users.some(u => u.email.toLowerCase() === trimmedEmail);
+    if (usernameExists) {
+        return { error: 'Username is already taken.' };
+    }
+    if (emailExists) {
+        return { error: 'Email is already registered.' };
+    }
+
+    // 3. Hash password and save
+    const { salt, hash } = hashPassword(password);
+    const newId = data.users.length > 0 ? Math.max(...data.users.map(u => u.id)) + 1 : 1;
+    
+    const newUser = {
+        id: newId,
+        username: username.trim(),
+        email: trimmedEmail,
+        fullName: (fullName || '').trim(),
+        salt,
+        hash
+    };
+
+    data.users.push(newUser);
+    const saved = writeData(data);
+    if (!saved) return { error: 'Database save error.' };
+
+    const { salt: _, hash: __, ...userProfile } = newUser;
+    return { user: userProfile };
+}
+
+// Authenticate user credentials
+function authenticateUser(usernameOrEmail, password) {
+    const data = readData();
+    const term = usernameOrEmail.trim().toLowerCase();
+    
+    // Find user by username or email
+    const user = data.users.find(u => u.username.toLowerCase() === term || u.email.toLowerCase() === term);
+    if (!user) return null;
+
+    // Verify password hash
+    const isValid = verifyPassword(password, user.salt, user.hash);
+    if (!isValid) return null;
+
+    const { salt, hash, ...userProfile } = user;
+    return userProfile;
+}
+
+// Retrieve user by ID
+function getUserById(id) {
+    const data = readData();
+    const user = data.users.find(u => u.id === parseInt(id));
+    if (!user) return null;
+
+    const { salt, hash, ...userProfile } = user;
+    return userProfile;
+}
+
 module.exports = {
     getCompanies,
     getCompanyById,
@@ -442,5 +523,8 @@ module.exports = {
     getEngagements,
     addEngagement,
     updateEngagementApproval,
-    getFeedbackAnalytics
+    getFeedbackAnalytics,
+    createUser,
+    authenticateUser,
+    getUserById
 };

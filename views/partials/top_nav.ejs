@@ -21,16 +21,32 @@
         </div>
     </div>
 
-    <!-- Profile Action Dropdown -->
-    <div class="d-flex align-items-center gap-3">
+    <!-- Profile Action Dropdown / Details -->
+    <div class="d-flex align-items-center gap-2">
         <div class="profile-badge d-flex align-items-center gap-2 bg-light p-1 pe-3 rounded-pill border">
-            <div class="profile-avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px; font-size: 0.85rem;">
-                A
-            </div>
-            <div class="text-start leading-none d-none d-sm-block">
-                <div class="fw-semibold text-dark text-xs" style="line-height: 1;">Admin Portal</div>
-                <small class="text-muted text-xxs" style="font-size: 0.65rem;">Coordinator</small>
-            </div>
+            <% if (user) { %>
+                <div class="profile-avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold text-uppercase" style="width: 32px; height: 32px; font-size: 0.85rem;">
+                    <%= user.fullName.substring(0, 1) %>
+                </div>
+                <div class="text-start leading-none d-none d-sm-block">
+                    <div class="fw-semibold text-dark text-xs" style="line-height: 1;"><%= user.fullName %></div>
+                    <small class="text-muted text-xxs" style="font-size: 0.65rem;">@<%= user.username %></small>
+                </div>
+            <% } else { %>
+                <div class="profile-avatar bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px; font-size: 0.85rem;">
+                    G
+                </div>
+                <div class="text-start leading-none d-none d-sm-block">
+                    <div class="fw-semibold text-dark text-xs" style="line-height: 1;">Guest</div>
+                    <small class="text-muted text-xxs" style="font-size: 0.65rem;">Not Logged In</small>
+                </div>
+            <% } %>
         </div>
+        
+        <% if (user) { %>
+            <a href="/logout" class="btn btn-outline-danger btn-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;" title="Log Out">
+                <i class="fa-solid fa-power-off"></i>
+            </a>
+        <% } %>
     </div>
 </div>

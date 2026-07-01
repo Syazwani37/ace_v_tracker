@@ -1,6 +1,7 @@
-// server.js - Extended Express application server
+// server.js - Extended Express application server with Session Authentication
 const express = require('express');
 const path = require('path');
+const session = require('express-session');
 const db = require('./db');
 
 const app = express();
@@ -14,9 +15,132 @@ app.use('/static', express.static(path.join(__dirname, 'static')));
 // Support parsing URL-encoded request bodies (form submissions)
 app.use(express.urlencoded({ extended: true }));
 
-// --- ROUTES ---
+// Configure Express Session Management
+app.use(session({
+    secret: 'avtracker-secret-key-987654321',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { 
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        secure: false // Set to true if running on HTTPS
+    }
+}));
 
-// 1. Dashboard Page
+// Authentication Guard Middleware
+function requireAuth(req, res, next) {
+    if (req.session && req.session.userId) {
+        next();
+    } else {
+        res.redirect('/login');
+    }
+}
+
+// Global router interceptor for public paths
+app.use((req, res, next) => {
+    const publicPaths = ['/login', '/signup'];
+    // Allow access to login, signup, and static folders without authentication
+    if (publicPaths.includes(req.path) || req.path.startsWith('/static')) {
+        return next();
+    }
+    requireAuth(req, res, next);
+});
+
+// Inject logged-in user profile details into EJS template render local contexts
+app.use((req, res, next) => {
+    if (req.session && req.session.userId) {
+        res.locals.user = db.getUserById(req.session.userId);
+    } else {
+        res.locals.user = null;
+    }
+    next();
+});
+
+// --- AUTHENTICATION ROUTES ---
+
+// 1. Get Login View
+app.get('/login', (req, res) => {
+    // If already logged in, redirect to dashboard
+    if (req.session && req.session.userId) {
+        return res.redirect('/');
+    }
+    res.render('login', {
+        error: req.query.error || '',
+        success: req.query.success || ''
+    });
+});
+
+// 2. Post Login Handler
+app.post('/login', (req, res) => {
+    const usernameOrEmail = (req.body.usernameOrEmail || '').trim();
+    const password = req.body.password || '';
+
+    if (!usernameOrEmail || !password) {
+        return res.redirect('/login?error=Please fill in all fields.');
+    }
+
+    const user = db.authenticateUser(usernameOrEmail, password);
+    if (user) {
+        req.session.userId = user.id;
+        return res.redirect('/');
+    } else {
+        return res.redirect('/login?error=Invalid email/username or password.');
+    }
+});
+
+// 3. Get Sign Up View
+app.get('/signup', (req, res) => {
+    if (req.session && req.session.userId) {
+        return res.redirect('/');
+    }
+    res.render('signup', {
+        error: req.query.error || ''
+    });
+});
+
+// 4. Post Sign Up Handler
+app.post('/signup', (req, res) => {
+    const username = (req.body.username || '').trim();
+    const email = (req.body.email || '').trim();
+    const password = req.body.password || '';
+    const confirmPassword = req.body.confirm_password || '';
+    const fullName = (req.body.fullName || '').trim();
+
+    if (!username || !email || !password || !confirmPassword || !fullName) {
+        return res.redirect('/signup?error=Please fill in all fields.');
+    }
+
+    if (password !== confirmPassword) {
+        return res.redirect('/signup?error=Passwords do not match.');
+    }
+
+    // Verify email domain ends with @mmu.edu.my
+    if (!email.toLowerCase().endsWith('@mmu.edu.my')) {
+        return res.redirect('/signup?error=Registration is restricted to Multimedia University emails (@mmu.edu.my).');
+    }
+
+    const result = db.createUser(username, email, password, fullName);
+    if (result.error) {
+        return res.redirect(`/signup?error=${encodeURIComponent(result.error)}`);
+    }
+
+    // Log the user in immediately after successful signup
+    req.session.userId = result.user.id;
+    return res.redirect('/?success=welcome');
+});
+
+// 5. Logout Handler
+app.get('/logout', (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            console.error('Session destruction error:', err);
+        }
+        res.redirect('/login?success=You have logged out successfully.');
+    });
+});
+
+// --- CORE FUNCTIONAL ROUTES ---
+
+// Dashboard Page
 app.get('/', (req, res) => {
     const engagements = db.getEngagements();
     const companies = db.getCompanies();
@@ -42,17 +166,15 @@ app.get('/', (req, res) => {
     });
 });
 
-// 2. Partner Directory Page (List, Filter, Add/Edit)
+// Partner Directory Page
 app.get('/companies', (req, res) => {
     let companies = db.getCompanies();
     const searchQuery = (req.query.search || '').trim();
     const industryFilter = (req.query.industry || '').trim();
 
-    // Industry options for dropdown menu
     const allCompaniesRaw = db.getCompanies();
     const industries = [...new Set(allCompaniesRaw.map(c => c.industry).filter(Boolean))].sort();
 
-    // Filter list by search term or industry selection
     if (searchQuery || industryFilter) {
         companies = companies.filter(c => {
             const matchesSearch = !searchQuery || c.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -76,7 +198,7 @@ app.get('/companies', (req, res) => {
     });
 });
 
-// 3. Add/Edit Company Handler
+// Add/Edit Company Handler
 app.post('/companies', (req, res) => {
     const id = req.body.id ? parseInt(req.body.id) : null;
     const name = (req.body.name || '').trim();
@@ -95,7 +217,6 @@ app.post('/companies', (req, res) => {
     }
 
     if (id) {
-        // Edit existing company
         const updated = db.updateCompany(id, name, industry, location, status, partnershipDate, contactPerson, email, phone, website, notes);
         if (updated) {
             return res.redirect(`/companies?msg=${encodeURIComponent(`Success! Partner company '<strong>${name}</strong>' has been updated.`)}&msgType=success`);
@@ -103,7 +224,6 @@ app.post('/companies', (req, res) => {
             return res.redirect(`/companies?msg=${encodeURIComponent('Error: Failed to update company. Please try again.')}&msgType=danger`);
         }
     } else {
-        // Add new company
         const added = db.addCompany(name, industry, location, status, partnershipDate, contactPerson, email, phone, website, notes);
         if (added) {
             return res.redirect(`/companies?msg=${encodeURIComponent(`Success! Partner company '<strong>${name}</strong>' has been added.`)}&msgType=success`);
@@ -113,7 +233,7 @@ app.post('/companies', (req, res) => {
     }
 });
 
-// 4. Log Visit Page
+// Log Visit Page
 app.get('/add-visit', (req, res) => {
     const companies = db.getCompanies();
     res.render('add_visit', {
@@ -126,7 +246,7 @@ app.get('/add-visit', (req, res) => {
     });
 });
 
-// 5. Log Visit Handler
+// Log Visit Handler
 app.post('/add-visit', (req, res) => {
     const companyId = parseInt(req.body.company_id || 0);
     const dateOccurred = (req.body.date_occurred || '').trim();
@@ -139,7 +259,6 @@ app.post('/add-visit', (req, res) => {
     const studentsCount = parseInt(req.body.students_count || 0);
     const objective = (req.body.objective || '').trim();
     
-    // Checkboxes will be present if checked, otherwise undefined
     const checklistApproved = req.body.checklist_approved === 'on';
     const requiredApproved = req.body.required_approved === 'on';
 
@@ -172,13 +291,12 @@ app.post('/add-visit', (req, res) => {
     }
 });
 
-// 6. Visit Approval Workflow Page
+// Visit Approval Workflow Page
 app.get('/visits/approvals', (req, res) => {
     const engagements = db.getEngagements();
     const pendingVisits = engagements.filter(e => e.status === 'Pending Approval');
     const processedVisits = engagements.filter(e => e.status !== 'Pending Approval');
 
-    // Selected visit (via query param ?id=X, default to first pending visit)
     let selectedVisit = null;
     const selectedId = parseInt(req.query.id);
     if (selectedId) {
@@ -201,11 +319,11 @@ app.get('/visits/approvals', (req, res) => {
     });
 });
 
-// 7. Process Visit Approval Handler
+// Process Visit Approval Handler
 app.post('/visits/approvals', (req, res) => {
     const id = parseInt(req.body.id || 0);
-    const approvalType = (req.body.approval_type || '').trim(); // 'hod', 'industry', or 'status'
-    const approvalStatus = (req.body.approval_status || '').trim(); // 'Approved', 'Rejected', etc.
+    const approvalType = (req.body.approval_type || '').trim();
+    const approvalStatus = (req.body.approval_status || '').trim();
 
     if (id > 0 && approvalType && approvalStatus) {
         const updated = db.updateEngagementApproval(id, approvalType, approvalStatus);
@@ -216,13 +334,12 @@ app.post('/visits/approvals', (req, res) => {
     return res.redirect('/visits/approvals');
 });
 
-// 8. Reports & Analytics Page
+// Reports & Analytics Page
 app.get('/reports', (req, res) => {
     const engagements = db.getEngagements();
     const companies = db.getCompanies();
     const feedback = db.getFeedbackAnalytics();
 
-    // Aggregate stats by engagement type
     const typeStats = {
         'Site Visit': { visits: 0, students: 0 },
         'Guest Lecture': { visits: 0, students: 0 },
@@ -247,7 +364,6 @@ app.get('/reports', (req, res) => {
         }
     });
 
-    // Group engagements by month for Chart.js
     const monthlyDataMap = {};
     engagements.forEach(eng => {
         if (eng.date_occurred) {
@@ -263,7 +379,7 @@ app.get('/reports', (req, res) => {
         return new Date(a) - new Date(b);
     });
 
-    const chartMonths = sortedMonths.slice(-5); // last 5 months
+    const chartMonths = sortedMonths.slice(-5);
     const chartCounts = chartMonths.map(m => monthlyDataMap[m]);
 
     res.render('report_analytics', {
@@ -280,7 +396,7 @@ app.get('/reports', (req, res) => {
     });
 });
 
-// 9. CSV Export Route
+// CSV Export Route
 app.get('/export', (req, res) => {
     const engagements = db.getEngagements();
     res.setHeader('Content-Type', 'text/csv');
