@@ -154,6 +154,20 @@ app.get('/', (req, res) => {
 
     const successParam = req.query.success || '';
 
+    // Compute monthly trend counts (Jan - Jun) dynamically from actual date_occurred
+    const chartData = Array(6).fill(0);
+    engagements.forEach(e => {
+        if (e.date_occurred) {
+            const d = new Date(e.date_occurred);
+            if (!isNaN(d)) {
+                const m = d.getMonth();
+                if (m >= 0 && m < 6) {
+                    chartData[m]++;
+                }
+            }
+        }
+    });
+
     res.render('index', {
         page_title: "Dashboard",
         current_page: "index",
@@ -162,7 +176,8 @@ app.get('/', (req, res) => {
         total_engagements: totalEngagements,
         upcoming_visits: upcomingVisits,
         total_students: totalStudents,
-        success_param: successParam
+        success_param: successParam,
+        chart_data: chartData
     });
 });
 

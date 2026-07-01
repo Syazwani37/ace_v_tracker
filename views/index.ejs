@@ -156,7 +156,7 @@ document.addEventListener("DOMContentLoaded", function() {
             labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
             datasets: [{
                 label: 'Engagements',
-                data: [120, 240, 480, 550, 400, 600],
+                data: <%- JSON.stringify(chart_data) %>,
                 backgroundColor: '#3b82f6',
                 hoverBackgroundColor: '#2563eb',
                 borderRadius: 6,
