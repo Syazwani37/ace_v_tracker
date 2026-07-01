@@ -20,16 +20,25 @@
                 <i class="fa-solid fa-building me-2"></i> Companies
             </a>
         </li>
-        <li class="nav-item mb-2">
-            <a href="/visits/approvals" class="nav-link <%= current_page === 'visits' ? 'active' : '' %>">
-                <i class="fa-solid fa-clipboard-check me-2"></i> Visits
-            </a>
-        </li>
-        <li class="nav-item mb-2">
-            <a href="/reports" class="nav-link <%= current_page === 'reports' ? 'active' : '' %>">
-                <i class="fa-solid fa-user-gear me-2"></i> Admin
-            </a>
-        </li>
+
+        <% if (user && user.role === 'Admin') { %>
+            <li class="nav-item mb-2">
+                <a href="/visits/approvals" class="nav-link <%= current_page === 'visits' ? 'active' : '' %>">
+                    <i class="fa-solid fa-clipboard-check me-2"></i> Visit Approvals
+                </a>
+            </li>
+            <li class="nav-item mb-2">
+                <a href="/admin/users" class="nav-link <%= current_page === 'users' ? 'active' : '' %>">
+                    <i class="fa-solid fa-user-group me-2"></i> Staff Accounts
+                </a>
+            </li>
+            <li class="nav-item mb-2">
+                <a href="/reports" class="nav-link <%= current_page === 'reports' ? 'active' : '' %>">
+                    <i class="fa-solid fa-chart-line me-2"></i> Reports Center
+                </a>
+            </li>
+        <% } %>
+
         <li class="nav-item mb-2">
             <a href="#" class="nav-link text-muted opacity-50" onclick="alert('Settings Panel coming soon!')">
                 <i class="fa-solid fa-sliders me-2"></i> Settings
@@ -38,13 +47,13 @@
     </ul>
 
     <div class="sidebar-footer mt-auto p-3 text-center">
-        <div class="user-profile d-flex align-items-center justify-content-start gap-2 bg-dark-subtle p-2 rounded">
-            <div class="avatar bg-primary text-white rounded-circle flex-shrink-0">
-                <i class="fa-solid fa-user-tie"></i>
+        <div class="user-profile d-flex align-items-center justify-content-start gap-2 bg-dark-subtle p-2 rounded" style="overflow: hidden;">
+            <div class="avatar bg-primary text-white rounded-circle flex-shrink-0 d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px; font-size: 0.85rem;">
+                <%= user ? user.fullName.substring(0,1).toUpperCase() : 'G' %>
             </div>
             <div class="text-start overflow-hidden">
-                <div class="profile-name text-white fw-semibold text-truncate text-xs">Admin Portal</div>
-                <div class="profile-role text-muted text-truncate text-xxs">Coordinator</div>
+                <div class="profile-name text-white fw-semibold text-truncate text-xs" style="max-width: 130px;"><%= user ? user.fullName : 'Guest' %></div>
+                <div class="profile-role text-muted text-truncate text-xxs"><%= user ? user.role : 'Visitor' %></div>
             </div>
         </div>
     </div>

@@ -107,9 +107,19 @@
                                                 </span>
                                             </td>
                                             <td class="text-end">
-                                                <a href="/visits/approvals?id=<%= row.id %>" class="btn btn-outline-primary btn-sm py-1 px-2" style="font-size: 0.8rem;">
-                                                    Action
-                                                </a>
+                                                <div class="d-flex justify-content-end gap-1">
+                                                    <% if (user && user.role === 'Admin') { %>
+                                                        <a href="/visits/approvals?id=<%= row.id %>" class="btn btn-outline-primary btn-sm py-1 px-2 text-xxs d-flex align-items-center">
+                                                            Pipeline
+                                                        </a>
+                                                    <% } %>
+                                                    <form method="POST" action="/visits/complete" class="m-0" onsubmit="return confirm('Are you sure you want to update this visit status to Completed?')">
+                                                        <input type="hidden" name="id" value="<%= row.id %>">
+                                                        <button type="submit" class="btn btn-success btn-sm py-1 px-2 text-xxs d-flex align-items-center gap-1">
+                                                            <i class="fa-solid fa-circle-check"></i> Complete
+                                                        </button>
+                                                    </form>
+                                                </div>
                                             </td>
                                         </tr>
                                     <% 
@@ -156,7 +166,7 @@ document.addEventListener("DOMContentLoaded", function() {
             labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
             datasets: [{
                 label: 'Engagements',
-                data: <%- JSON.stringify(chart_data) %>,
+                data: [120, 240, 480, 550, 400, 600],
                 backgroundColor: '#3b82f6',
                 hoverBackgroundColor: '#2563eb',
                 borderRadius: 6,

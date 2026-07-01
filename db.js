@@ -1,4 +1,4 @@
-// db.js - Extended JSON database helper module with User Authentication
+// db.js - Extended JSON database helper module with RBAC and User Management
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -18,7 +18,6 @@ function readData() {
     try {
         const content = fs.readFileSync(jsonFile, 'utf8');
         const data = JSON.parse(content);
-        // Ensure user collection exists
         if (!data.users) data.users = [];
         return data;
     } catch (err) {
@@ -236,11 +235,17 @@ function seedMockData() {
     writeData(data);
 }
 
-// Fetch all companies sorted by name
-function getCompanies() {
+// Fetch all companies sorted by name (filtering out Archived status unless requested)
+function getCompanies(includeArchived = false) {
     const data = readData();
     const engagements = data.engagements || [];
-    const companies = data.companies.map(c => {
+    let list = data.companies;
+    
+    if (!includeArchived) {
+        list = list.filter(c => c.status !== 'Archived');
+    }
+
+    const companies = list.map(c => {
         const compEngs = engagements.filter(e => e.company_id === c.id && e.status === 'Completed');
         let lastEngagement = 'N/A';
         if (compEngs.length > 0) {
@@ -301,6 +306,33 @@ function updateCompany(id, name, industry, location, status, partnershipDate, co
     company.website = (website || '').trim();
     company.notes = (notes || '').trim();
 
+    return writeData(data);
+}
+
+// Delete a company
+function deleteCompany(id) {
+    const data = readData();
+    const companyIdx = data.companies.findIndex(c => c.id === parseInt(id));
+    if (companyIdx === -1) return false;
+
+    data.companies.splice(companyIdx, 1);
+    // Clean up associated engagements
+    data.engagements = data.engagements.filter(e => e.company_id !== parseInt(id));
+    return writeData(data);
+}
+
+// Archive a company
+function archiveCompany(id) {
+    const data = readData();
+    const company = data.companies.find(c => c.id === parseInt(id));
+    if (!company) return false;
+
+    // Toggle status to Archived or restore to Active Partner
+    if (company.status === 'Archived') {
+        company.status = 'Active Partner';
+    } else {
+        company.status = 'Archived';
+    }
     return writeData(data);
 }
 
@@ -471,13 +503,20 @@ function createUser(username, email, password, fullName) {
     const { salt, hash } = hashPassword(password);
     const newId = data.users.length > 0 ? Math.max(...data.users.map(u => u.id)) + 1 : 1;
     
+    // Assign first user as active Admin, others default to pending Staff
+    const isFirstUser = data.users.length === 0;
+    const role = isFirstUser ? 'Admin' : 'Staff';
+    const status = isFirstUser ? 'Active' : 'Pending';
+
     const newUser = {
         id: newId,
         username: username.trim(),
         email: trimmedEmail,
         fullName: (fullName || '').trim(),
         salt,
-        hash
+        hash,
+        role,
+        status
     };
 
     data.users.push(newUser);
@@ -493,11 +532,9 @@ function authenticateUser(usernameOrEmail, password) {
     const data = readData();
     const term = usernameOrEmail.trim().toLowerCase();
     
-    // Find user by username or email
     const user = data.users.find(u => u.username.toLowerCase() === term || u.email.toLowerCase() === term);
     if (!user) return null;
 
-    // Verify password hash
     const isValid = verifyPassword(password, user.salt, user.hash);
     if (!isValid) return null;
 
@@ -515,16 +552,36 @@ function getUserById(id) {
     return userProfile;
 }
 
+// Get all users (for Admin User Management panel)
+function getUsers() {
+    const data = readData();
+    return data.users.map(({ salt, hash, ...userProfile }) => userProfile);
+}
+
+// Update user status
+function updateUserStatus(id, newStatus) {
+    const data = readData();
+    const user = data.users.find(u => u.id === parseInt(id));
+    if (!user) return false;
+
+    user.status = newStatus;
+    return writeData(data);
+}
+
 module.exports = {
     getCompanies,
     getCompanyById,
     addCompany,
     updateCompany,
+    deleteCompany,
+    archiveCompany,
     getEngagements,
     addEngagement,
     updateEngagementApproval,
     getFeedbackAnalytics,
     createUser,
     authenticateUser,
-    getUserById
+    getUserById,
+    getUsers,
+    updateUserStatus
 };

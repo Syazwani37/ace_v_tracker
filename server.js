@@ -1,4 +1,4 @@
-// server.js - Extended Express application server with Session Authentication
+// server.js - Extended Express application server with RBAC and User Management
 const express = require('express');
 const path = require('path');
 const session = require('express-session');
@@ -29,16 +29,33 @@ app.use(session({
 // Authentication Guard Middleware
 function requireAuth(req, res, next) {
     if (req.session && req.session.userId) {
-        next();
+        const user = db.getUserById(req.session.userId);
+        if (user && user.status === 'Active') {
+            return next();
+        }
+        // If account has been suspended or is pending in real-time, destroy session
+        req.session.destroy();
+        return res.redirect('/login?error=Your session is invalid or account status is not Active.');
     } else {
         res.redirect('/login');
     }
 }
 
+// Admin-Only Guard Middleware
+function requireAdmin(req, res, next) {
+    if (req.session && req.session.userId) {
+        const user = db.getUserById(req.session.userId);
+        if (user && user.role === 'Admin') {
+            return next();
+        }
+    }
+    // Access Denied: redirect to dashboard with alert
+    res.redirect('/?error=access_denied');
+}
+
 // Global router interceptor for public paths
 app.use((req, res, next) => {
     const publicPaths = ['/login', '/signup'];
-    // Allow access to login, signup, and static folders without authentication
     if (publicPaths.includes(req.path) || req.path.startsWith('/static')) {
         return next();
     }
@@ -57,9 +74,8 @@ app.use((req, res, next) => {
 
 // --- AUTHENTICATION ROUTES ---
 
-// 1. Get Login View
+// Get Login View
 app.get('/login', (req, res) => {
-    // If already logged in, redirect to dashboard
     if (req.session && req.session.userId) {
         return res.redirect('/');
     }
@@ -69,7 +85,7 @@ app.get('/login', (req, res) => {
     });
 });
 
-// 2. Post Login Handler
+// Post Login Handler (with user status verification)
 app.post('/login', (req, res) => {
     const usernameOrEmail = (req.body.usernameOrEmail || '').trim();
     const password = req.body.password || '';
@@ -80,6 +96,12 @@ app.post('/login', (req, res) => {
 
     const user = db.authenticateUser(usernameOrEmail, password);
     if (user) {
+        if (user.status === 'Pending') {
+            return res.redirect('/login?error=Your account is pending administrator approval.');
+        } else if (user.status === 'Suspended') {
+            return res.redirect('/login?error=Your account has been suspended.');
+        }
+        
         req.session.userId = user.id;
         return res.redirect('/');
     } else {
@@ -87,7 +109,7 @@ app.post('/login', (req, res) => {
     }
 });
 
-// 3. Get Sign Up View
+// Get Sign Up View
 app.get('/signup', (req, res) => {
     if (req.session && req.session.userId) {
         return res.redirect('/');
@@ -97,7 +119,7 @@ app.get('/signup', (req, res) => {
     });
 });
 
-// 4. Post Sign Up Handler
+// Post Sign Up Handler
 app.post('/signup', (req, res) => {
     const username = (req.body.username || '').trim();
     const email = (req.body.email || '').trim();
@@ -113,7 +135,6 @@ app.post('/signup', (req, res) => {
         return res.redirect('/signup?error=Passwords do not match.');
     }
 
-    // Verify email domain ends with @mmu.edu.my
     if (!email.toLowerCase().endsWith('@mmu.edu.my')) {
         return res.redirect('/signup?error=Registration is restricted to Multimedia University emails (@mmu.edu.my).');
     }
@@ -123,12 +144,16 @@ app.post('/signup', (req, res) => {
         return res.redirect(`/signup?error=${encodeURIComponent(result.error)}`);
     }
 
-    // Log the user in immediately after successful signup
-    req.session.userId = result.user.id;
-    return res.redirect('/?success=welcome');
+    // If the registered user is Active (i.e. the first bootstrapped admin user), log them in
+    if (result.user.status === 'Active') {
+        req.session.userId = result.user.id;
+        return res.redirect('/?success=welcome');
+    } else {
+        return res.redirect('/login?success=Account registered successfully! Please wait for an administrator to approve your access.');
+    }
 });
 
-// 5. Logout Handler
+// Logout Handler
 app.get('/logout', (req, res) => {
     req.session.destroy((err) => {
         if (err) {
@@ -136,6 +161,39 @@ app.get('/logout', (req, res) => {
         }
         res.redirect('/login?success=You have logged out successfully.');
     });
+});
+
+// --- ADMINISTRATIVE USER MANAGEMENT ROUTES ---
+
+// Get User List (Admin Only)
+app.get('/admin/users', requireAdmin, (req, res) => {
+    const users = db.getUsers();
+    res.render('admin_users', {
+        page_title: "Staff Account Approvals",
+        current_page: "users",
+        users,
+        success: req.query.success || '',
+        error: req.query.error || ''
+    });
+});
+
+// Update User Account Status (Admin Only)
+app.post('/admin/users/status', requireAdmin, (req, res) => {
+    const id = parseInt(req.body.id || 0);
+    const status = (req.body.status || '').trim();
+
+    if (id > 0 && ['Active', 'Suspended'].includes(status)) {
+        // Prevent admins from suspending themselves
+        if (id === req.session.userId) {
+            return res.redirect('/admin/users?error=You cannot modify your own access status.');
+        }
+
+        const updated = db.updateUserStatus(id, status);
+        if (updated) {
+            return res.redirect(`/admin/users?success=User account status successfully updated to ${status}.`);
+        }
+    }
+    return res.redirect('/admin/users?error=Failed to update user status.');
 });
 
 // --- CORE FUNCTIONAL ROUTES ---
@@ -153,20 +211,7 @@ app.get('/', (req, res) => {
     }, 0);
 
     const successParam = req.query.success || '';
-
-    // Compute monthly trend counts (Jan - Jun) dynamically from actual date_occurred
-    const chartData = Array(6).fill(0);
-    engagements.forEach(e => {
-        if (e.date_occurred) {
-            const d = new Date(e.date_occurred);
-            if (!isNaN(d)) {
-                const m = d.getMonth();
-                if (m >= 0 && m < 6) {
-                    chartData[m]++;
-                }
-            }
-        }
-    });
+    const errorParam = req.query.error || '';
 
     res.render('index', {
         page_title: "Dashboard",
@@ -177,17 +222,34 @@ app.get('/', (req, res) => {
         upcoming_visits: upcomingVisits,
         total_students: totalStudents,
         success_param: successParam,
-        chart_data: chartData
+        error_param: errorParam
     });
+});
+
+// Update Visit Status to Completed (Staff/Admin)
+app.post('/visits/complete', (req, res) => {
+    const id = parseInt(req.body.id || 0);
+    if (id > 0) {
+        // Sets status directly to Completed
+        const updated = db.updateEngagementApproval(id, 'status', 'Completed');
+        if (updated) {
+            return res.redirect('/?success=visit_completed');
+        }
+    }
+    return res.redirect('/?error=failed_completion');
 });
 
 // Partner Directory Page
 app.get('/companies', (req, res) => {
-    let companies = db.getCompanies();
+    const isAdmin = res.locals.user && res.locals.user.role === 'Admin';
+    // Admins can see Archived companies in database settings if they want
+    const includeArchived = req.query.include_archived === 'true' && isAdmin;
+    
+    let companies = db.getCompanies(includeArchived);
     const searchQuery = (req.query.search || '').trim();
     const industryFilter = (req.query.industry || '').trim();
 
-    const allCompaniesRaw = db.getCompanies();
+    const allCompaniesRaw = db.getCompanies(includeArchived);
     const industries = [...new Set(allCompaniesRaw.map(c => c.industry).filter(Boolean))].sort();
 
     if (searchQuery || industryFilter) {
@@ -209,7 +271,8 @@ app.get('/companies', (req, res) => {
         search_query: searchQuery,
         industry_filter: industryFilter,
         message,
-        message_type: messageType
+        message_type: messageType,
+        include_archived: includeArchived
     });
 });
 
@@ -246,6 +309,30 @@ app.post('/companies', (req, res) => {
             return res.redirect(`/companies?msg=${encodeURIComponent(`Error: A partner company named '<strong>${name}</strong>' already exists.`)}&msgType=danger`);
         }
     }
+});
+
+// Delete Company Handler (Admin Only)
+app.post('/companies/delete', requireAdmin, (req, res) => {
+    const id = parseInt(req.body.id || 0);
+    if (id > 0) {
+        const deleted = db.deleteCompany(id);
+        if (deleted) {
+            return res.redirect(`/companies?msg=${encodeURIComponent('Success! The company profile has been permanently deleted.')}&msgType=success`);
+        }
+    }
+    return res.redirect(`/companies?msg=${encodeURIComponent('Error: Failed to delete the company.')}&msgType=danger`);
+});
+
+// Archive Company Handler (Admin Only)
+app.post('/companies/archive', requireAdmin, (req, res) => {
+    const id = parseInt(req.body.id || 0);
+    if (id > 0) {
+        const archived = db.archiveCompany(id);
+        if (archived) {
+            return res.redirect(`/companies?msg=${encodeURIComponent('Success! The company status has been toggled (Archived / Restored).')}&msgType=success`);
+        }
+    }
+    return res.redirect(`/companies?msg=${encodeURIComponent('Error: Failed to toggle archiving status.')}&msgType=danger`);
 });
 
 // Log Visit Page
@@ -293,7 +380,9 @@ app.post('/add-visit', (req, res) => {
             requiredApproved
         );
         if (added) {
-            if (status === 'Pending Approval') {
+            // Staff users redirect to dashboard, Admin redirect to approvals
+            const isAdmin = res.locals.user && res.locals.user.role === 'Admin';
+            if (status === 'Pending Approval' && isAdmin) {
                 return res.redirect('/visits/approvals?success=visit_logged');
             } else {
                 return res.redirect('/?success=visit_logged');
@@ -306,8 +395,8 @@ app.post('/add-visit', (req, res) => {
     }
 });
 
-// Visit Approval Workflow Page
-app.get('/visits/approvals', (req, res) => {
+// Visit Approvals Workflow Page (Admin Only)
+app.get('/visits/approvals', requireAdmin, (req, res) => {
     const engagements = db.getEngagements();
     const pendingVisits = engagements.filter(e => e.status === 'Pending Approval');
     const processedVisits = engagements.filter(e => e.status !== 'Pending Approval');
@@ -334,8 +423,8 @@ app.get('/visits/approvals', (req, res) => {
     });
 });
 
-// Process Visit Approval Handler
-app.post('/visits/approvals', (req, res) => {
+// Process Visit Approval Handler (Admin Only)
+app.post('/visits/approvals', requireAdmin, (req, res) => {
     const id = parseInt(req.body.id || 0);
     const approvalType = (req.body.approval_type || '').trim();
     const approvalStatus = (req.body.approval_status || '').trim();
@@ -349,10 +438,10 @@ app.post('/visits/approvals', (req, res) => {
     return res.redirect('/visits/approvals');
 });
 
-// Reports & Analytics Page
-app.get('/reports', (req, res) => {
+// Reports & Analytics Page (Admin Only)
+app.get('/reports', requireAdmin, (req, res) => {
     const engagements = db.getEngagements();
-    const companies = db.getCompanies();
+    const companies = db.getCompanies(true); // include archived in full reports if needed
     const feedback = db.getFeedbackAnalytics();
 
     const typeStats = {
@@ -411,8 +500,8 @@ app.get('/reports', (req, res) => {
     });
 });
 
-// CSV Export Route
-app.get('/export', (req, res) => {
+// CSV Export Route (Admin Only)
+app.get('/export', requireAdmin, (req, res) => {
     const engagements = db.getEngagements();
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename=avtracker_engagements_export_${new Date().toISOString().slice(0,10).replace(/-/g, '')}.csv`);

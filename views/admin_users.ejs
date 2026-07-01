@@ -1,0 +1,109 @@
+<%- include('partials/header') %>
+
+<div class="app-container">
+    <%- include('partials/sidebar') %>
+    
+    <main class="main-content">
+        <!-- Top Navigation -->
+        <%- include('partials/top_nav') %>
+
+        <!-- Success & Error Alerts -->
+        <% if (success) { %>
+            <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+                <i class="fa-solid fa-circle-check me-2"></i> <%= success %>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        <% } %>
+
+        <% if (error) { %>
+            <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                <i class="fa-solid fa-triangle-exclamation"></i> <%= error %>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        <% } %>
+
+        <!-- Staff Account Approvals Panel -->
+        <div class="panel-card">
+            <div class="panel-card-header bg-light-subtle d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0 text-dark">Staff Account Approvals</h5>
+                <span class="badge bg-primary rounded-pill"><%= users.length %> Total Users</span>
+            </div>
+            <div class="panel-card-body p-0">
+                <div class="table-responsive">
+                    <table class="table custom-table align-middle text-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>Full Name</th>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% users.forEach((item, idx) => { %>
+                                <tr>
+                                    <td><%= idx + 1 %></td>
+                                    <td><strong><%= item.fullName %></strong></td>
+                                    <td>@<%= item.username %></td>
+                                    <td><%= item.email %></td>
+                                    <td>
+                                        <span class="badge <%= item.role === 'Admin' ? 'bg-danger-light text-danger' : 'bg-primary-light text-primary' %> text-xxs px-2">
+                                            <%= item.role %>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <% if (item.status === 'Active') { %>
+                                            <span class="badge bg-success text-white text-xxs px-2 py-1">Active</span>
+                                        <% } else if (item.status === 'Pending') { %>
+                                            <span class="badge bg-warning text-dark text-xxs px-2 py-1">Pending Approval</span>
+                                        <% } else { %>
+                                            <span class="badge bg-danger text-white text-xxs px-2 py-1">Suspended</span>
+                                        <% } %>
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="d-flex justify-content-end gap-2">
+                                            <% if (item.id === user.id) { %>
+                                                <small class="text-muted text-xxs">Current Session</small>
+                                            <% } else { %>
+                                                <% if (item.status === 'Pending') { %>
+                                                    <form method="POST" action="/admin/users/status" class="m-0">
+                                                        <input type="hidden" name="id" value="<%= item.id %>">
+                                                        <input type="hidden" name="status" value="Active">
+                                                        <button type="submit" class="btn btn-success btn-xs d-flex align-items-center gap-1">
+                                                            <i class="fa-solid fa-user-check text-xxs"></i> Approve Access
+                                                        </button>
+                                                    </form>
+                                                <% } else if (item.status === 'Active') { %>
+                                                    <form method="POST" action="/admin/users/status" class="m-0">
+                                                        <input type="hidden" name="id" value="<%= item.id %>">
+                                                        <input type="hidden" name="status" value="Suspended">
+                                                        <button type="submit" class="btn btn-danger btn-xs d-flex align-items-center gap-1">
+                                                            <i class="fa-solid fa-user-slash text-xxs"></i> Suspend Access
+                                                        </button>
+                                                    </form>
+                                                <% } else { %>
+                                                    <form method="POST" action="/admin/users/status" class="m-0">
+                                                        <input type="hidden" name="id" value="<%= item.id %>">
+                                                        <input type="hidden" name="status" value="Active">
+                                                        <button type="submit" class="btn btn-outline-success btn-xs d-flex align-items-center gap-1">
+                                                            <i class="fa-solid fa-user-check text-xxs"></i> Reactivate Access
+                                                        </button>
+                                                    </form>
+                                                <% } %>
+                                            <% } %>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<%- include('partials/footer') %>
