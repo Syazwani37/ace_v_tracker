@@ -136,86 +136,49 @@ function render_stars(rating) {
             </div>
         </div>
 
-        <!-- Bottom Row Cards: Student Feedback, Word Cloud & Export Feed -->
+        <!-- Bottom Row Card: System Logs & Export History -->
         <div class="panel-card mb-0">
+            <div class="panel-card-header bg-light-subtle d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0 text-dark">Recent Export History & Logs</h5>
+                <button onclick="window.print()" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-2">
+                    <i class="fa-solid fa-file-export"></i> Export to PDF/Excel
+                </button>
+            </div>
             <div class="panel-card-body">
-                <div class="row g-4 align-items-stretch">
-                    <!-- Left: Average Ratings -->
-                    <div class="col-lg-4">
-                        <h5 class="fw-bold text-dark mb-3">Student Feedback Analytics</h5>
-                        <h6 class="text-xs font-semibold text-secondary text-uppercase tracking-wider mb-3">Average ratings</h6>
-                        <div class="d-flex flex-column gap-3">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <span class="text-sm font-medium text-dark">Visits</span>
-                                <%- render_stars(feedback.avg_visits) %>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center justify-content-between bg-light p-3 rounded-3 border">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="rounded-circle bg-primary-light text-primary d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                    <i class="fa-solid fa-user text-sm"></i>
+                                </div>
+                                <span class="fw-semibold text-dark text-sm">Individual Export</span>
                             </div>
-                            <div class="d-flex align-items-center justify-content-between">
-                                <span class="text-sm font-medium text-dark">Learning Value</span>
-                                <%- render_stars(feedback.avg_learning) %>
-                            </div>
-                            <div class="d-flex align-items-center justify-content-between">
-                                <span class="text-sm font-medium text-dark">Feedback</span>
-                                <%- render_stars(feedback.avg_feedback) %>
-                            </div>
-                            <div class="text-xxs text-muted mt-2 border-top pt-2 text-center">
-                                Compiled from <%= feedback.total_feedback %> submitted surveys.
-                            </div>
+                            <span class="text-xxs text-muted">1 hour ago</span>
                         </div>
                     </div>
-
-                    <!-- Middle: Word Cloud Keywords -->
-                    <div class="col-lg-4 border-start border-end">
-                        <div class="d-flex flex-column justify-content-center h-100 px-3">
-                            <h6 class="text-xs font-semibold text-secondary text-uppercase tracking-wider mb-3 text-center">Feedback Keywords</h6>
-                            <div class="word-cloud-container py-4">
-                                <span class="word-cloud-item text-primary fw-bold fs-4">learning</span>
-                                <span class="word-cloud-item text-success fw-semibold fs-5">industry</span>
-                                <span class="word-cloud-item text-warning fw-medium fs-6">knowledge</span>
-                                <span class="word-cloud-item text-info fw-bold fs-5">practical</span>
-                                <span class="word-cloud-item text-danger fw-semibold fs-6">skills</span>
-                                <span class="word-cloud-item text-secondary fw-medium text-xs">exposure</span>
-                                <span class="word-cloud-item text-primary fw-semibold fs-5">experience</span>
-                                <span class="word-cloud-item text-success fw-bold fs-4">feedback</span>
+                    
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center justify-content-between bg-light p-3 rounded-3 border">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="rounded-circle bg-info-light text-info d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                    <i class="fa-solid fa-users text-sm"></i>
+                                </div>
+                                <span class="fw-semibold text-dark text-sm">Class Export</span>
                             </div>
+                            <span class="text-xxs text-muted">2 hours ago</span>
                         </div>
                     </div>
-
-                    <!-- Right: Export logs & History Feed -->
-                    <div class="col-lg-4 d-flex flex-column justify-content-between">
-                        <button onclick="window.print()" class="btn btn-outline-primary btn-sm d-flex align-items-center justify-content-center gap-2 mb-3 align-self-end">
-                            <i class="fa-solid fa-file-export"></i> Export to PDF/Excel
-                        </button>
-                        
-                        <div class="space-y-3 d-flex flex-column gap-2 mt-auto">
-                            <div class="d-flex align-items-center justify-content-between bg-light p-2 rounded-3 border" style="font-size: 0.8rem;">
-                                <div class="d-flex align-items-center gap-2">
-                                    <div class="w-8 h-8 rounded-circle bg-primary-light text-primary d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
-                                        <i class="fa-solid fa-user text-xs"></i>
-                                    </div>
-                                    <span class="fw-semibold text-dark">Individual</span>
+                    
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center justify-content-between bg-light p-3 rounded-3 border">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="rounded-circle bg-primary-light text-primary d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                    <i class="fa-solid fa-user text-sm"></i>
                                 </div>
-                                <span class="text-xxs text-muted">1 hour ago</span>
+                                <span class="fw-semibold text-dark text-sm">Individual Export</span>
                             </div>
-                            
-                            <div class="d-flex align-items-center justify-content-between bg-light p-2 rounded-3 border" style="font-size: 0.8rem;">
-                                <div class="d-flex align-items-center gap-2">
-                                    <div class="w-8 h-8 rounded-circle bg-info-light text-info d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
-                                        <i class="fa-solid fa-users text-xs"></i>
-                                    </div>
-                                    <span class="fw-semibold text-dark">Class</span>
-                                </div>
-                                <span class="text-xxs text-muted">2 hours ago</span>
-                            </div>
-                            
-                            <div class="d-flex align-items-center justify-content-between bg-light p-2 rounded-3 border" style="font-size: 0.8rem;">
-                                <div class="d-flex align-items-center gap-2">
-                                    <div class="w-8 h-8 rounded-circle bg-primary-light text-primary d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
-                                        <i class="fa-solid fa-user text-xs"></i>
-                                    </div>
-                                    <span class="fw-semibold text-dark">Individual</span>
-                                </div>
-                                <span class="text-xxs text-muted">1 day ago</span>
-                            </div>
+                            <span class="text-xxs text-muted">1 day ago</span>
                         </div>
                     </div>
                 </div>
