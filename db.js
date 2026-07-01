@@ -503,9 +503,9 @@ function createUser(username, email, password, fullName) {
     const { salt, hash } = hashPassword(password);
     const newId = data.users.length > 0 ? Math.max(...data.users.map(u => u.id)) + 1 : 1;
     
-    // Assign first user as active Admin, others default to pending Staff
+    // Assign first user as active Admin, others default to pending Registered User
     const isFirstUser = data.users.length === 0;
-    const role = isFirstUser ? 'Admin' : 'Staff';
+    const role = isFirstUser ? 'Admin' : 'Registered User';
     const status = isFirstUser ? 'Active' : 'Pending';
 
     const newUser = {

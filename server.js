@@ -169,7 +169,7 @@ app.get('/logout', (req, res) => {
 app.get('/admin/users', requireAdmin, (req, res) => {
     const users = db.getUsers();
     res.render('admin_users', {
-        page_title: "Staff Account Approvals",
+        page_title: "User Account Approvals",
         current_page: "users",
         users,
         success: req.query.success || '',
