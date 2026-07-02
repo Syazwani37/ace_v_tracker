@@ -13,9 +13,11 @@
                 <h2>Company Profiles</h2>
                 <p>Manage list of active, pending, and archived industry partner companies.</p>
             </div>
-            <button class="btn btn-primary btn-sm" onclick="openAddModal()">
-                <i class="fa-solid fa-plus me-1"></i> Add Company
-            </button>
+            <% if (user && user.role !== 'Admin') { %>
+                <button class="btn btn-primary btn-sm" onclick="openAddModal()">
+                    <i class="fa-solid fa-plus me-1"></i> Add Company
+                </button>
+            <% } %>
         </div>
 
         <!-- Alert Notification -->
@@ -125,12 +127,14 @@
                                                 <button class="btn btn-sm btn-light py-1 px-2 text-xs" onclick='openViewModal(<%= JSON.stringify(row) %>)'>
                                                     View
                                                 </button>
-                                                <button class="btn btn-sm btn-light py-1 px-2 text-xs" onclick='openEditModal(<%= JSON.stringify(row) %>)'>
-                                                    Edit
-                                                </button>
-                                                <a href="/add-visit?company_id=<%= row.id %>" class="btn btn-sm btn-primary py-1 px-2 text-xs" title="Add Engagement">
-                                                    + Visit
-                                                </a>
+                                                <% if (user && user.role !== 'Admin') { %>
+                                                    <button class="btn btn-sm btn-light py-1 px-2 text-xs" onclick='openEditModal(<%= JSON.stringify(row) %>)'>
+                                                        Edit
+                                                    </button>
+                                                    <a href="/add-visit?company_id=<%= row.id %>" class="btn btn-sm btn-primary py-1 px-2 text-xs" title="Add Engagement">
+                                                        + Visit
+                                                    </a>
+                                                <% } %>
                                                 <% if (user && user.role === 'Admin') { %>
                                                     <!-- Archive Form -->
                                                     <form method="POST" action="/companies/archive" class="d-inline m-0" onsubmit="return confirm('Are you sure you want to change this company\'s archiving status?')">
