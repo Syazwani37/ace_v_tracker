@@ -28,8 +28,11 @@
                 </a>
             </li>
             <li class="nav-item mb-2">
-                <a href="/admin/users" class="nav-link <%= current_page === 'users' ? 'active' : '' %>">
-                    <i class="fa-solid fa-user-group me-2"></i> User Accounts
+                <a href="/admin/users" class="nav-link <%= current_page === 'users' ? 'active' : '' %> d-flex align-items-center justify-content-between">
+                    <span><i class="fa-solid fa-user-group me-2"></i> User Accounts</span>
+                    <% if (pendingUsersCount > 0) { %>
+                        <span class="badge bg-danger rounded-pill px-2" style="font-size: 0.65rem;"><%= pendingUsersCount %></span>
+                    <% } %>
                 </a>
             </li>
             <li class="nav-item mb-2">

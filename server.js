@@ -62,12 +62,19 @@ app.use((req, res, next) => {
     requireAuth(req, res, next);
 });
 
-// Inject logged-in user profile details into EJS template render local contexts
+// Inject logged-in user profile details and pending accounts count into templates
 app.use((req, res, next) => {
     if (req.session && req.session.userId) {
         res.locals.user = db.getUserById(req.session.userId);
+        if (res.locals.user && res.locals.user.role === 'Admin') {
+            const allUsers = db.getUsers();
+            res.locals.pendingUsersCount = allUsers.filter(u => u.status === 'Pending').length;
+        } else {
+            res.locals.pendingUsersCount = 0;
+        }
     } else {
         res.locals.user = null;
+        res.locals.pendingUsersCount = 0;
     }
     next();
 });
