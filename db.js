@@ -561,6 +561,10 @@ function updateUserStatus(id, newStatus) {
     if (!user) return false;
 
     user.status = newStatus;
+    // When approved to Active status, change role to Staff (unless already Admin)
+    if (newStatus === 'Active' && user.role !== 'Admin') {
+        user.role = 'Staff';
+    }
     return writeData(data);
 }
 
