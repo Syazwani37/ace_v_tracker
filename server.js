@@ -135,10 +135,6 @@ app.post('/signup', (req, res) => {
         return res.redirect('/signup?error=Passwords do not match.');
     }
 
-    if (!email.toLowerCase().endsWith('@mmu.edu.my')) {
-        return res.redirect('/signup?error=Registration is restricted to Multimedia University emails (@mmu.edu.my).');
-    }
-
     const result = db.createUser(username, email, password, fullName);
     if (result.error) {
         return res.redirect(`/signup?error=${encodeURIComponent(result.error)}`);

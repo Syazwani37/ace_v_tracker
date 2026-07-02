@@ -483,11 +483,7 @@ function verifyPassword(password, salt, hash) {
 function createUser(username, email, password, fullName) {
     const data = readData();
 
-    // 1. Email domain validation - MUST end with @mmu.edu.my
     const trimmedEmail = (email || '').trim().toLowerCase();
-    if (!trimmedEmail.endsWith('@mmu.edu.my')) {
-        return { error: 'Only Multimedia University emails (@mmu.edu.my) are allowed to register.' };
-    }
 
     // 2. Uniqueness check
     const usernameExists = data.users.some(u => u.username.toLowerCase() === username.trim().toLowerCase());
