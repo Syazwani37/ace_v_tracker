@@ -150,9 +150,19 @@ app.post('/signup', (req, res) => {
     // If the registered user is Active (i.e. the first bootstrapped admin user), log them in
     if (result.user.status === 'Active') {
         req.session.userId = result.user.id;
-        return res.redirect('/?success=welcome');
+        return res.send(`
+            <script>
+                alert("Administrator account created successfully! Logging you in...");
+                window.location.href = "/";
+            </script>
+        `);
     } else {
-        return res.redirect('/login?success=Account registered successfully! Please wait for an administrator to approve your access.');
+        return res.send(`
+            <script>
+                alert("Account registered successfully! Please wait for an administrator to approve your access.");
+                window.location.href = "/login";
+            </script>
+        `);
     }
 });
 
