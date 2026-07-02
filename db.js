@@ -485,13 +485,8 @@ function createUser(username, email, password, fullName) {
 
     const trimmedEmail = (email || '').trim().toLowerCase();
 
-    let cleanUsername = username.trim();
-    if (cleanUsername.startsWith('@')) {
-        cleanUsername = cleanUsername.slice(1);
-    }
-
     // 2. Uniqueness check
-    const usernameExists = data.users.some(u => u.username.toLowerCase() === cleanUsername.toLowerCase());
+    const usernameExists = data.users.some(u => u.username.toLowerCase() === username.trim().toLowerCase());
     const emailExists = data.users.some(u => u.email.toLowerCase() === trimmedEmail);
     if (usernameExists) {
         return { error: 'Username is already taken.' };
@@ -511,7 +506,7 @@ function createUser(username, email, password, fullName) {
 
     const newUser = {
         id: newId,
-        username: cleanUsername,
+        username: username.trim(),
         email: trimmedEmail,
         fullName: (fullName || '').trim(),
         salt,
@@ -531,10 +526,7 @@ function createUser(username, email, password, fullName) {
 // Authenticate user credentials
 function authenticateUser(usernameOrEmail, password) {
     const data = readData();
-    let term = usernameOrEmail.trim().toLowerCase();
-    if (term.startsWith('@')) {
-        term = term.slice(1);
-    }
+    const term = usernameOrEmail.trim().toLowerCase();
     
     const user = data.users.find(u => u.username.toLowerCase() === term || u.email.toLowerCase() === term);
     if (!user) return null;

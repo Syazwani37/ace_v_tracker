@@ -62,19 +62,23 @@ app.use((req, res, next) => {
     requireAuth(req, res, next);
 });
 
-// Inject logged-in user profile details and pending accounts count into templates
+// Inject logged-in user profile details and pending counts into templates
 app.use((req, res, next) => {
     if (req.session && req.session.userId) {
         res.locals.user = db.getUserById(req.session.userId);
         if (res.locals.user && res.locals.user.role === 'Admin') {
             const allUsers = db.getUsers();
             res.locals.pendingUsersCount = allUsers.filter(u => u.status === 'Pending').length;
+            const allCompanies = db.getCompanies(true);
+            res.locals.pendingCompaniesCount = allCompanies.filter(c => c.status === 'Pending').length;
         } else {
             res.locals.pendingUsersCount = 0;
+            res.locals.pendingCompaniesCount = 0;
         }
     } else {
         res.locals.user = null;
         res.locals.pendingUsersCount = 0;
+        res.locals.pendingCompaniesCount = 0;
     }
     next();
 });
@@ -304,7 +308,13 @@ app.post('/companies', (req, res) => {
     const name = (req.body.name || '').trim();
     const industry = (req.body.industry || '').trim();
     const location = (req.body.location || '').trim();
-    const status = (req.body.status || 'Active Partner').trim();
+    let status = (req.body.status || 'Active Partner').trim();
+    
+    // If a non-admin (Staff) is creating a new company, force it to start as Pending
+    if (!id && res.locals.user && res.locals.user.role !== 'Admin') {
+        status = 'Pending';
+    }
+
     const partnershipDate = (req.body.partnership_date || '').trim();
     const contactPerson = (req.body.contact_person || '').trim();
     const email = (req.body.email || '').trim();
