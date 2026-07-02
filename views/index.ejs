@@ -17,9 +17,11 @@
                 <a href="/export" class="btn btn-outline-secondary btn-sm me-2">
                     <i class="fa-solid fa-file-csv me-1"></i> Export CSV
                 </a>
-                <a href="/add-visit" class="btn btn-primary btn-sm">
-                    <i class="fa-solid fa-plus me-1"></i> Log Visit
-                </a>
+                <% if (user && user.role !== 'Admin') { %>
+                    <a href="/add-visit" class="btn btn-primary btn-sm">
+                        <i class="fa-solid fa-plus me-1"></i> Log Visit
+                    </a>
+                <% } %>
             </div>
         </div>
 
