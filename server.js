@@ -261,15 +261,18 @@ app.get('/companies', (req, res) => {
     let companies = db.getCompanies(includeArchived);
     const searchQuery = (req.query.search || '').trim();
     const industryFilter = (req.query.industry || '').trim();
+    const locationFilter = (req.query.location || '').trim();
 
     const allCompaniesRaw = db.getCompanies(includeArchived);
     const industries = [...new Set(allCompaniesRaw.map(c => c.industry).filter(Boolean))].sort();
+    const locations = [...new Set(allCompaniesRaw.map(c => c.location).filter(Boolean))].sort();
 
-    if (searchQuery || industryFilter) {
+    if (searchQuery || industryFilter || locationFilter) {
         companies = companies.filter(c => {
             const matchesSearch = !searchQuery || c.name.toLowerCase().includes(searchQuery.toLowerCase());
             const matchesIndustry = !industryFilter || c.industry.toLowerCase() === industryFilter.toLowerCase();
-            return matchesSearch && matchesIndustry;
+            const matchesLocation = !locationFilter || c.location.toLowerCase() === locationFilter.toLowerCase();
+            return matchesSearch && matchesIndustry && matchesLocation;
         });
     }
 
@@ -281,8 +284,10 @@ app.get('/companies', (req, res) => {
         current_page: "companies",
         companies,
         industries,
+        locations,
         search_query: searchQuery,
         industry_filter: industryFilter,
+        location_filter: locationFilter,
         message,
         message_type: messageType,
         include_archived: includeArchived
