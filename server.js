@@ -94,14 +94,18 @@ app.get('/login', (req, res) => {
 
 // Post Login Handler (with user status verification)
 app.post('/login', (req, res) => {
-    const usernameOrEmail = (req.body.usernameOrEmail || '').trim();
+    let loginIdentifier = (req.body.usernameOrEmail || '').trim();
     const password = req.body.password || '';
 
-    if (!usernameOrEmail || !password) {
+    if (!loginIdentifier || !password) {
         return res.redirect('/login?error=Please fill in all fields.');
     }
 
-    const user = db.authenticateUser(usernameOrEmail, password);
+    if (loginIdentifier.startsWith('@')) {
+        loginIdentifier = loginIdentifier.substring(1);
+    }
+
+    const user = db.authenticateUser(loginIdentifier, password);
     if (user) {
         if (user.status === 'Pending') {
             return res.redirect('/login?error=Your account is pending administrator approval.');
